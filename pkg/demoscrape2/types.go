@@ -87,6 +87,7 @@ type teamStats struct {
 	TR             int     `json:"TR"`
 	TRW            int     `json:"TRW"`
 	Deaths         int     `json:"deaths"`
+	RatingAvg      float64 `json:"ratingAvg"`
 
 	//kinda garbo
 	Normalizer int `json:"normalizer"`
@@ -218,6 +219,7 @@ type playerStats struct {
 	Tr           float64 `json:"tr"` //trade ratio
 	ImpactRating float64 `json:"impactRating"`
 	Rating       float64 `json:"rating"`
+	DeltaRating  float64 `json:"deltaRating"`
 
 	//side specific
 	TDamage               int     `json:"TDamage"`
