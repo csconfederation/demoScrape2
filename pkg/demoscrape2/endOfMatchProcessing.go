@@ -2,15 +2,15 @@ package demoscrape2
 
 import (
 	"math"
-	"strconv"
 
+	"github.com/csconfederation/demoScrape2/pkg/demoscrape2/types"
 	log "github.com/sirupsen/logrus"
 )
 
-func removeInvalidRounds(game *Game) {
+func removeInvalidRounds(game *types.Game) {
 	//we want to remove bad rounds (knife/veto rounds, incomplete rounds, redo rounds)
 	validRoundsMap := make(map[int8]bool)
-	validRounds := make([]*round, 0)
+	validRounds := make([]*types.Round, 0)
 	lastProcessedRoundNum := game.Rounds[len(game.Rounds)-1].RoundNum + 1
 	for i := len(game.Rounds) - 1; i >= 0; i-- {
 		_, validRoundExists := validRoundsMap[game.Rounds[i].RoundNum]
@@ -31,19 +31,14 @@ func removeInvalidRounds(game *Game) {
 	game.Rounds = validRounds
 }
 
-func endOfMatchProcessing(game *Game) {
+func endOfMatchProcessing(game *types.Game) {
 	removeInvalidRounds(game)
-
-	game.TotalPlayerStats = make(map[uint64]*playerStats)
-	game.TotalTeamStats = make(map[string]*teamStats)
-	game.TotalWPAlog = make([]*wpalog, 0)
-
 	for i := len(game.Rounds) - 1; i >= 0; i-- {
 		game.TotalWPAlog = append(game.TotalWPAlog, game.Rounds[i].WPAlog...)
 
 		for teamName, team := range game.Rounds[i].TeamStats {
 			if game.TotalTeamStats[teamName] == nil && teamName != "" {
-				game.TotalTeamStats[teamName] = &teamStats{}
+				game.TotalTeamStats[teamName] = &types.TeamStats{}
 			}
 			game.TotalTeamStats[teamName].Pistols += team.Pistols
 			game.TotalTeamStats[teamName].PistolsW += team.PistolsW
@@ -63,7 +58,7 @@ func endOfMatchProcessing(game *Game) {
 		log.Debug(game.Rounds[i].RoundNum)
 		for steam, player := range (*game.Rounds[i]).PlayerStats {
 			if game.TotalPlayerStats[steam] == nil {
-				game.TotalPlayerStats[steam] = &playerStats{Name: player.Name, SteamID: player.SteamID, TeamClanName: player.TeamClanName}
+				game.TotalPlayerStats[steam] = &types.PlayerStats{Name: player.Name, SteamID: player.SteamID, TeamClanName: player.TeamClanName}
 			}
 			game.TotalPlayerStats[steam].Rounds += 1
 			game.TotalPlayerStats[steam].Kills += player.Kills
@@ -176,7 +171,7 @@ func endOfMatchProcessing(game *Game) {
 			if player.RF != 0 {
 				if game.Rounds[i].EndDueToBombEvent {
 					player.Rws = 70 * (float64(player.Damage) / float64(game.Rounds[i].WinTeamDmg))
-					steamId64, _ := strconv.ParseUint(player.SteamID, 10, 64)
+					steamId64 := player.SteamID
 					if player.Side == 2 && game.Rounds[i].Planter == steamId64 {
 						player.Rws += 30
 					} else if player.Side == 3 && game.Rounds[i].Defuser == steamId64 {
@@ -206,7 +201,7 @@ func endOfMatchProcessing(game *Game) {
 	return
 }
 
-func calculateDerivedFields(game *Game) {
+func calculateDerivedFields(game *types.Game) {
 
 	impactRoundAvg := 0.0
 	killRoundAvg := 0.0
@@ -390,10 +385,10 @@ func calculateDerivedFields(game *Game) {
 	return
 }
 
-func calculateSidedStats(game *Game) {
+func calculateSidedStats(game *types.Game) {
 
-	game.CtPlayerStats = make(map[uint64]*playerStats)
-	game.TPlayerStats = make(map[uint64]*playerStats)
+	game.CtPlayerStats = make(map[uint64]*types.PlayerStats)
+	game.TPlayerStats = make(map[uint64]*types.PlayerStats)
 
 	for i := len(game.Rounds) - 1; i >= 0; i-- {
 		//add to round master stats
@@ -404,7 +399,7 @@ func calculateSidedStats(game *Game) {
 				sidedStats = game.TPlayerStats
 			}
 			if sidedStats[steam] == nil {
-				sidedStats[steam] = &playerStats{Name: player.Name, SteamID: player.SteamID, TeamClanName: player.TeamClanName}
+				sidedStats[steam] = &types.PlayerStats{Name: player.Name, SteamID: player.SteamID, TeamClanName: player.TeamClanName}
 			}
 			sidedStats[steam].Rounds += 1
 			sidedStats[steam].Kills += player.Kills
