@@ -7,23 +7,23 @@ type TeamStats struct {
 	CtWinPoints    float64 `json:"ctWinPoints"`
 	TImpactPoints  float64 `json:"TImpactPoints"`
 	CtImpactPoints float64 `json:"ctImpactPoints"`
-	FourVFiveW     int     `json:"fourVFiveW"`
-	FourVFiveS     int     `json:"fourVFiveS"`
-	FiveVFourW     int     `json:"fiveVFourW"`
-	FiveVFourS     int     `json:"fiveVFourS"`
-	Pistols        int     `json:"pistols"`
-	PistolsW       int     `json:"pistolsW"`
-	Saves          int     `json:"saves"`
-	Clutches       int     `json:"clutches"`
+	FourVFiveW     int     `json:"fourVFiveW" end_of_match_sum:"true"`
+	FourVFiveS     int     `json:"fourVFiveS" end_of_match_sum:"true"`
+	FiveVFourW     int     `json:"fiveVFourW" end_of_match_sum:"true"`
+	FiveVFourS     int     `json:"fiveVFourS" end_of_match_sum:"true"`
+	Pistols        int     `json:"pistols" end_of_match_sum:"true"`
+	PistolsW       int     `json:"pistolsW" end_of_match_sum:"true"`
+	Saves          int     `json:"saves" end_of_match_sum:"true"`
+	Clutches       int     `json:"clutches" end_of_match_sum:"true"`
 	Traded         int     `json:"traded"`
 	Fass           int     `json:"fass"`
 	Ef             int     `json:"ef"`
 	Ud             int     `json:"ud"`
 	Util           int     `json:"util"`
-	CtR            int     `json:"ctR"`
-	CtRW           int     `json:"ctRW"`
-	TR             int     `json:"TR"`
-	TRW            int     `json:"TRW"`
+	CtR            int     `json:"ctR" end_of_match_sum:"true"`
+	CtRW           int     `json:"ctRW" end_of_match_sum:"true"`
+	TR             int     `json:"TR" end_of_match_sum:"true"`
+	TRW            int     `json:"TRW" end_of_match_sum:"true"`
 	Deaths         int     `json:"deaths"`
 
 	//kinda garbo

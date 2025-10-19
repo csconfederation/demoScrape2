@@ -42,7 +42,6 @@ const printChatLog = true
 const printDebugLog = true
 const FORCE_NEW_STATS_UPLOAD = false
 const BACKEND_PUSHING = true
-const MR = 12
 
 var killValues = map[string]float64{
 	"attacking":     1.2, //base values
@@ -85,7 +84,7 @@ func ProcessDemo(demo io.ReadCloser) (*types.Game, error) {
 	// Parse to end
 	err = parser.ParseToEnd()
 
-	endOfMatchProcessing(game)
+	game.EndOfMatchProcessing()
 
 	return game, err
 

@@ -15,58 +15,58 @@ type PlayerStats struct {
 	Rounds       int    `json:"rounds"`
 	//playerPoints float32
 	//teamPoints float32
-	Damage              int     `json:"damage"`
-	Kills               uint8   `json:"kills"`
-	Assists             uint8   `json:"assists"`
-	Deaths              uint8   `json:"deaths"`
+	Damage              int     `json:"damage" end_of_match_sum:"true"`
+	Kills               uint8   `json:"kills" end_of_match_sum:"true"`
+	Assists             uint8   `json:"assists" end_of_match_sum:"true"`
+	Deaths              uint8   `json:"deaths" end_of_match_sum:"true"`
 	DeathTick           int     `json:"deathTick"`
-	DeathPlacement      float64 `json:"deathPlacement"`
-	TicksAlive          int     `json:"ticksAlive"`
-	Trades              int     `json:"trades"`
-	Traded              int     `json:"traded"`
-	Ok                  int     `json:"ok"`
-	Ol                  int     `json:"ol"`
-	Cl_1                int     `json:"cl_1"`
-	Cl_2                int     `json:"cl_2"`
-	Cl_3                int     `json:"cl_3"`
-	Cl_4                int     `json:"cl_4"`
-	Cl_5                int     `json:"cl_5"`
-	TwoK                int     `json:"twoK"`
-	ThreeK              int     `json:"threeK"`
-	FourK               int     `json:"fourK"`
-	FiveK               int     `json:"fiveK"`
-	NadeDmg             int     `json:"nadeDmg"`
-	InfernoDmg          int     `json:"infernoDmg"`
-	UtilDmg             int     `json:"utilDmg"`
-	Ef                  int     `json:"ef"`
-	FAss                int     `json:"FAss"`
-	EnemyFlashTime      float64 `json:"enemyFlashTime"`
-	Hs                  int     `json:"hs"`
-	KastRounds          float64 `json:"kastRounds"`
-	Saves               int     `json:"saves"`
-	Entries             int     `json:"entries"`
+	DeathPlacement      float64 `json:"deathPlacement" end_of_match_sum:"true"`
+	TicksAlive          int     `json:"ticksAlive" end_of_match_sum:"true"`
+	Trades              int     `json:"trades" end_of_match_sum:"true"`
+	Traded              int     `json:"traded" end_of_match_sum:"true"`
+	Ok                  int     `json:"ok" end_of_match_sum:"true"`
+	Ol                  int     `json:"ol" end_of_match_sum:"true"`
+	Cl_1                int     `json:"cl_1" end_of_match_sum:"true"`
+	Cl_2                int     `json:"cl_2" end_of_match_sum:"true"`
+	Cl_3                int     `json:"cl_3" end_of_match_sum:"true"`
+	Cl_4                int     `json:"cl_4" end_of_match_sum:"true"`
+	Cl_5                int     `json:"cl_5" end_of_match_sum:"true"`
+	TwoK                int     `json:"twoK" end_of_match_sum:"true"`
+	ThreeK              int     `json:"threeK" end_of_match_sum:"true"`
+	FourK               int     `json:"fourK" end_of_match_sum:"true"`
+	FiveK               int     `json:"fiveK" end_of_match_sum:"true"`
+	NadeDmg             int     `json:"nadeDmg" end_of_match_sum:"true"`
+	InfernoDmg          int     `json:"infernoDmg" end_of_match_sum:"true"`
+	UtilDmg             int     `json:"utilDmg" end_of_match_sum:"true"`
+	Ef                  int     `json:"ef" end_of_match_sum:"true"`
+	FAss                int     `json:"FAss" end_of_match_sum:"true"`
+	EnemyFlashTime      float64 `json:"enemyFlashTime" end_of_match_sum:"true"`
+	Hs                  int     `json:"hs" end_of_match_sum:"true"`
+	KastRounds          float64 `json:"kastRounds" end_of_match_sum:"true"`
+	Saves               int     `json:"saves" end_of_match_sum:"true"`
+	Entries             int     `json:"entries" end_of_match_sum:"true"`
 	KillPoints          float64 `json:"killPoints"`
-	ImpactPoints        float64 `json:"impactPoints"`
-	WinPoints           float64 `json:"winPoints"`
-	AwpKills            int     `json:"awpKills"`
-	RF                  int     `json:"RF"`
-	RA                  int     `json:"RA"`
-	NadesThrown         int     `json:"nadesThrown"`
-	FiresThrown         int     `json:"firesThrown"`
-	FlashThrown         int     `json:"flashThrown"`
-	SmokeThrown         int     `json:"smokeThrown"`
-	DamageTaken         int     `json:"damageTaken"`
-	SuppRounds          int     `json:"suppRounds"`
-	SuppDamage          int     `json:"suppDamage"`
+	ImpactPoints        float64 `json:"impactPoints" end_of_match_sum:"true"`
+	WinPoints           float64 `json:"winPoints" end_of_match_sum:"true"`
+	AwpKills            int     `json:"awpKills" end_of_match_sum:"true"`
+	RF                  int     `json:"RF" end_of_match_sum:"true"`
+	RA                  int     `json:"RA" end_of_match_sum:"true"`
+	NadesThrown         int     `json:"nadesThrown" end_of_match_sum:"true"`
+	FiresThrown         int     `json:"firesThrown" end_of_match_sum:"true"`
+	FlashThrown         int     `json:"flashThrown" end_of_match_sum:"true"`
+	SmokeThrown         int     `json:"smokeThrown" end_of_match_sum:"true"`
+	DamageTaken         int     `json:"damageTaken" end_of_match_sum:"true"`
+	SuppRounds          int     `json:"suppRounds" end_of_match_sum:"true"`
+	SuppDamage          int     `json:"suppDamage" end_of_match_sum:"true"`
 	LurkerBlips         int     `json:"lurkerBlips"`
 	DistanceToTeammates int     `json:"distanceToTeammates"`
 	LurkRounds          int     `json:"lurkRounds"`
 	Wlp                 float64 `json:"wlp"`
-	Mip                 float64 `json:"mip"`
-	Rws                 float64 `json:"rws"` //round win shares
-	Eac                 int     `json:"eac"` //effective assist contributions
+	Mip                 float64 `json:"mip" end_of_match_sum:"true"`
+	Rws                 float64 `json:"rws"`                         //round win shares
+	Eac                 int     `json:"eac" end_of_match_sum:"true"` //effective assist contributions
 
-	Rwk int `json:"rwk"` //rounds with Kills
+	Rwk int `json:"rwk" end_of_match_sum:"true"` //rounds with Kills
 
 	//derived
 	UtilThrown   int     `json:"utilThrown"`
