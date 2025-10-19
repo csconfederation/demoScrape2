@@ -1,0 +1,92 @@
+package helpers
+
+import (
+	"github.com/csconfederation/demoScrape2/pkg/demoscrape2/types"
+)
+
+type Dictionary map[string]interface{}
+
+var RoundEndReasons = map[int]string{
+	0:  "StillInProgress", //base values
+	1:  "TargetBombed",
+	2:  "VIPEscaped",
+	3:  "VIPKilled",
+	4:  "TerroristsEscaped",
+	5:  "CTStoppedEscape",
+	6:  "TerroristsStopped",
+	7:  "BombDefused",
+	8:  "CTWin",
+	9:  "TerroristsWin",
+	10: "Draw",
+	11: "HostagesRescued",
+	12: "TargetSaved",
+	13: "HostagesNotRescued",
+	14: "TerroristsNotEscaped",
+	15: "VIPNotEscaped",
+	16: "GameStart",
+	17: "TerroristsSurrender",
+	18: "CTSurrender",
+	19: "TerroristsPlanted",
+	20: "CTsReachedHostage",
+}
+
+func getPlayerAPIDict(side string, player *types.PlayerStats) Dictionary {
+
+	return Dictionary{
+		"playerSteamId": player.SteamID,
+		"side":          side,
+		"teamName":      player.TeamClanName,
+		"adp":           player.DeathPlacement,
+		"adr":           player.Adr,
+		"assists":       player.Assists,
+		"atd":           player.Atd,
+		"awpK":          player.AwpKills,
+		"damageDealt":   player.Damage,
+		"damageTaken":   player.DamageTaken,
+		"deaths":        player.Deaths,
+		"eac":           player.Eac,
+		"ef":            player.Ef,
+		"eft":           player.EnemyFlashTime,
+		"fAss":          player.FAss,
+		"fDeaths":       player.Ol,
+		"fireDamage":    player.InfernoDmg,
+		"fires":         player.FiresThrown,
+		"fiveK":         player.FiveK,
+		"fourK":         player.FourK,
+		"threeK":        player.ThreeK,
+		"twoK":          player.TwoK,
+		"fKills":        player.Ok,
+		"flashes":       player.FlashThrown,
+		"hs":            player.Hs,
+		"impact":        player.ImpactRating,
+		"iwr":           player.Iiwr,
+		"jumps":         0,
+		"kast":          player.Kast,
+		"kills":         player.Kills,
+		"kpa":           player.KillPointAvg,
+		"lurks":         player.LurkRounds,
+		"mip":           player.Mip,
+		"nadeDamage":    player.NadeDmg,
+		"nades":         player.NadesThrown,
+		"oneVFive":      player.Cl_5,
+		"oneVFour":      player.Cl_4,
+		"oneVThree":     player.Cl_3,
+		"oneVTwo":       player.Cl_2,
+		"oneVOne":       player.Cl_1,
+		"ra":            player.RA,
+		"rating":        player.Rating,
+		"rf":            player.RF,
+		"rounds":        player.Rounds,
+		"rwk":           player.Rwk,
+		"rws":           player.Rws,
+		"saves":         player.Saves,
+		"smokes":        player.SmokeThrown,
+		"suppR":         player.SuppRounds,
+		"suppX":         player.SuppDamage,
+		"traded":        player.Traded,
+		"trades":        player.Trades,
+		"ud":            player.UtilDmg,
+		"util":          player.UtilThrown,
+		"wlp":           player.Wlp,
+	}
+}
