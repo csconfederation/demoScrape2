@@ -148,6 +148,7 @@ func ProcessDemo(demo io.ReadCloser) (*Game, error) {
 		game.Flags.LastTickProcessed = 0
 		game.Flags.TicksProcessed = 0
 		game.Flags.DidRoundEndFire = false
+		game.Flags.DidScoreUpdateFire = false
 		game.Flags.RoundStartedAt = 0
 		game.Flags.HaveInitRound = false
 	}
@@ -209,7 +210,7 @@ func ProcessDemo(demo io.ReadCloser) (*Game, error) {
 		//set winner
 		game.PotentialRound.WinnerClanName = winnerClanName
 		//log.Debug("We think this team won", winnerClanName)
-		if !game.PotentialRound.KnifeRound {
+		if !game.PotentialRound.KnifeRound && !game.Flags.DidScoreUpdateFire {
 			game.Teams[game.PotentialRound.WinnerClanName].Score += 1
 		}
 		//go through and set our WPAlog output to the winner
@@ -655,12 +656,12 @@ func ProcessDemo(demo io.ReadCloser) (*Game, error) {
 
 		//added to ensure that a bad round that gets finished does not premuturely finish the game since we track score separately
 		if game.Flags.IsGameLive {
+			game.Flags.DidScoreUpdateFire = true
 			//we take the existing preupdate score of the updating team score
 			updatedTeam := game.Teams[validateTeamName(game, e.TeamState.ClanName(), e.TeamState.Team())]
 			//and compare to the old score from scoreboard
-			if e.OldScore != updatedTeam.Score {
-				updatedTeam.Score = e.OldScore
-			}
+			updatedTeam.Score = e.NewScore
+			game.Teams[validateTeamName(game, e.TeamState.Opponent.ClanName(), e.TeamState.Opponent.Team())].Score = e.TeamState.Opponent.Score()
 		}
 	})
 
