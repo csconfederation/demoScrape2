@@ -82,7 +82,7 @@ func isRoundFinalInHalf(round int8) bool {
 }
 
 func validateTeamName(game *Game, teamName string, teamNum common.Team) string {
-	if teamName != "" {
+	if teamName != "" && game.Teams["StartedT"] == nil {
 		name := ""
 		if strings.HasPrefix(teamName, "[") {
 			if len(teamName) == 31 {
