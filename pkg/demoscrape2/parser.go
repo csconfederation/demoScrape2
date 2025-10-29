@@ -1058,7 +1058,7 @@ func ProcessDemo(demo io.ReadCloser) (*Game, error) {
 		if game.Flags.IsGameLive && game.Flags.InRound {
 			if e.NewTeam > 1 {
 				//we are joining an actual team
-				if game.PotentialRound.PlayerStats[e.Player.SteamID64] == nil && e.Player.IsBot && e.Player.IsAlive() {
+				if game.PotentialRound.PlayerStats[e.Player.SteamID64] == nil && e.Player.IsAlive() {
 					//get team
 					team := e.NewTeamState
 					player := &playerStats{Name: e.Player.Name, SteamID: strconv.FormatUint(e.Player.SteamID64, 10), IsBot: e.Player.IsBot, Side: int(team.Team()), TeamENUM: team.ID(), TeamClanName: validateTeamName(game, team.ClanName(), team.Team()), Health: 100, TradeList: make(map[uint64]int), DamageList: make(map[uint64]int)}
