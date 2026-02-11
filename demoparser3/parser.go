@@ -27,10 +27,10 @@ func ProcessDemo(demo io.ReadCloser) (*types.Game, error) {
 
 	err := parser.ParseToEnd()
 
-	//TODO: stats processing
-	//err := game.EndOfMatchProcessing()
-	//
+	err = game.EndOfMatchProcessing()
+
 	if err != nil {
+		logger.Error(err.Error())
 		return nil, err
 	}
 

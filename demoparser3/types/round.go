@@ -7,6 +7,7 @@ import (
 )
 
 type Round struct {
+	StartingTick    int
 	RoundNum        int                     `json:"roundNum"`
 	IsPrePlant      bool                    `json:"isPrePlant"`
 	IsPostPlant     bool                    `json:"isPostPlant"`
@@ -19,14 +20,18 @@ type Round struct {
 	RoundEndReason  events.RoundEndReason   `json:"roundEndReason"`
 	AllPlayersStats map[uint64]*PlayerStats `json:"allPlayersStats"`
 	Winner          *Team                   `json:"winner"`
+	Loser           *Team                   `json:"loser"`
 	PostWinCon      bool                    `json:"postWinCon"` // Post win condition. The few seconds between round ending and before a new round starts.
-	//WPALog          []*WPALog               `json:"wpaLog"`
+	TeamStats       map[string]*TeamStats   `json:"teamStats"`
+	IsValid         bool                    `json:"isValid"`
 }
 
-func NewRound() *Round {
+func NewRound(tick int) *Round {
 	return &Round{
+		StartingTick:    tick,
 		IsPrePlant:      true,
 		AllPlayersStats: make(map[uint64]*PlayerStats),
+		TeamStats:       make(map[string]*TeamStats),
 	}
 }
 
@@ -34,8 +39,6 @@ func (round *Round) BombPlanted(planter *common.Player) {
 	round.IsPrePlant = false
 	round.IsPostPlant = false
 	round.TMoney = true
-	// TODO: Check if needed - I don't think we need this
-	//round.BombStartTick = bombStartTick
 	if planter == nil {
 		logger.Warn("Bomb planted by a nil player, possibly POV demo")
 		return
@@ -72,28 +75,21 @@ func (round *Round) BombExplode() {
 
 func (round *Round) RoundEnd(winner, loser *Team, reason events.RoundEndReason) {
 
-	if winner == nil {
+	if &winner == nil {
 		logger.Warn("Winner is nil - RoundEnd")
 		return
 	}
 
-	round.Winner = winner
+	round.Winner = winner.Clone()
+	round.Loser = loser.Clone()
 	round.RoundEndReason = reason
-	// TODO: Do we need RoundIntegrity
-	//game.Flags.RoundIntegrityEnd = p.GameState().TotalRoundsPlayed()
-	//game.TotalRounds = game.Flags.RoundIntegrityEnd
 	round.IsPrePlant = false
 	round.IsPostPlant = false
 	round.PostWinCon = true
-	round.Winner.Score += 1
-	// Assuming MR + 1 == 13
-	// we need this check because RoundEndOfficial is not triggered at the end of a final round
 	round.IsFinalRound = isFinalRound(winner.Score, loser.Score)
-
-	// TODO: WPALog is being deleted at stats' end
-	//for _, log := range round.WPALog {
-	//	log.Winner = winner
-	//}
+	if round.IsPistolRound {
+		round.TeamStats[round.Winner.Name].PistolRounds.Won += 1
+	}
 
 	// TODO: Handle this processing at the end
 
@@ -257,10 +253,14 @@ func (round *Round) RoundEnd(winner, loser *Team, reason events.RoundEndReason) 
 }
 
 func (round *Round) RoundFreezetimeEnd(roundsPlayed int) {
-	round.IsPistolRound = isPistolRound(roundsPlayed)
+	round.IsPistolRound = (roundsPlayed%12)+1 == 1
+	if round.IsFinalRound {
+		for team := range round.TeamStats {
+			round.TeamStats[team].PistolRounds.Total += 1
+		}
+	}
 }
 
-// TODO: Check if this check can be replaced by game.TotalRoundsPlayed
 func isFinalRound(winnerScore, loserScore int) bool {
 	if winnerScore == 13 && loserScore < 12 {
 		return true
@@ -268,15 +268,11 @@ func isFinalRound(winnerScore, loserScore int) bool {
 
 	overtime := ((winnerScore+loserScore)-24-1)/6 + 1
 	//OT win
-	if (winnerScore-12-1)/3 == overtime {
+	if (winnerScore-12-1)/3 == overtime && overtime > 0 {
 		return true
 	}
 
 	return false
-}
-
-func isPistolRound(roundsPlayed int) bool {
-	return roundsPlayed == 0 || roundsPlayed == 12
 }
 
 //type Round struct {

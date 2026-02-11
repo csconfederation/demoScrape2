@@ -18,14 +18,25 @@ type PlayerStats struct {
 	EnemiesFlashed     int     `json:"enemiesFlashed" end_of_match_sum:"true"`
 	EnemyFlashDuration float64 `json:"enemyFlashTime" end_of_match_sum:"true"`
 	//TODO: check
-	MostRecentFlasher uint64         `json:"mostRecentFlasher"`
-	UtilityThrown     map[string]int `json:"utilityThrown" end_of_match_sum:"true"`
+	//MostRecentFlasher uint64         `json:"mostRecentFlasher"`
+	UtilityThrown map[string]int `json:"utilityThrown" end_of_match_sum:"true"`
+	Kills         int            `json:"kills" end_of_match_sum:"true"`
+	Deaths        int            `json:"deaths" end_of_match_sum:"true"`
+	DeathOrder    int            `json:"deathOrder" end_of_match_sum:"true"` // Order in which a player died. Ex.: Entry fraggers will have the lowest order (possibly 0)
+	Assists       int            `json:"assists" end_of_match_sum:"true"`
+	EAC           int            `json:"eac" end_of_match_sum:"true"` // Effective Assists Contribution
+	FlashAssists  int            `json:"flashAssists" end_of_match_sum:"true"`
+	Clutch        *ClutchAttempt `json:"clutch" end_of_match_sum:"true"`
+	DamageList    map[uint64]int `json:"damageList"`
+	SupportDamage int            `json:"supportDamage" end_of_match_sum:"true"`
+	LurkerBlips   int            `json:"lurkerBlips" end_of_match_sum:"true"`
 }
 
 func NewPlayerStats() *PlayerStats {
 	return &PlayerStats{
 		ImpactPoints:  0,
 		UtilityThrown: make(map[string]int),
+		DamageList:    make(map[uint64]int),
 	}
 }
 
@@ -33,7 +44,7 @@ func (player *PlayerStats) PlayerHurt(attacker *PlayerStats, damage int, equipme
 	player.DamageTaken += damage
 	attacker.DamageDone += damage
 	//TODO: Check if we need this
-	//victimStats.DamageList[attackerStats.SteamID] += damage
+	//player.DamageList[attacker.] += damage
 	if isUtility(equipmentType) {
 		attacker.UtilityDamage += damage
 		switch equipmentType {
@@ -62,6 +73,37 @@ func (player *PlayerStats) GrenadeThrown(grenade common.EquipmentType) {
 	}
 
 	player.UtilityThrown[grenade.String()] += 1
+}
+
+func (player *PlayerStats) Kill() {
+	player.Kills += 1
+}
+
+func (player *PlayerStats) Death(deathOrder int) {
+	player.Deaths += 1
+	player.DeathOrder = deathOrder
+}
+
+func (player *PlayerStats) Assist(isFlashAssist bool) {
+	player.Assists += 1
+	if isFlashAssist {
+		player.FlashAssists += 1
+	}
+
+	//TODO: How to handle this
+	//pS[e.Assister.SteamID64].Eac += 1
+	//player.KASTRound = 1
+	//player.SupportRound = 1
+
+	//else if float64(parser.GameState().IngameTick()) < pS[e.Victim.SteamID64].MostRecentFlashVal {
+	//	//this will trigger if there is both a flash assist and a damage assist
+	//	pS[pS[e.Victim.SteamID64].MostRecentFlasher].FAss += 1
+	//	pS[pS[e.Victim.SteamID64].MostRecentFlasher].Eac += 1
+	//	pS[pS[e.Victim.SteamID64].MostRecentFlasher].SuppRounds = 1
+	//	flashAssisted = true
+	//	flashAssister = pS[pS[e.Victim.SteamID64].MostRecentFlasher].Name
+	//}
+
 }
 
 //type PlayerStats struct {

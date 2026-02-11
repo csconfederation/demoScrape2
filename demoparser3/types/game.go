@@ -6,6 +6,7 @@ import (
 )
 
 const MR = 12
+const TickRate = 64
 
 //
 //var clutchBonus = [...]float64{0, 0.2, 0.6, 1.2, 2, 3}
@@ -17,6 +18,15 @@ type Game struct {
 	RoundsToWin  int
 	Teams        map[string]*Team
 	MapName      string
+	TSide        string
+	CTSide       string
+
+	// Lurker
+	lastCheckedTick int
+	currentTick     int
+
+	// Aggregated stats
+	TotalTeamStats map[string]*TeamStats
 }
 
 func NewGame() *Game {
@@ -30,6 +40,112 @@ func NewGame() *Game {
 func (game *Game) Start(counterTerrorists, terrorists *common.TeamState) {
 	game.Teams[counterTerrorists.ClanName()] = NewTeam(counterTerrorists.ClanName())
 	game.Teams[terrorists.ClanName()] = NewTeam(terrorists.ClanName())
+	game.CTSide = counterTerrorists.ClanName()
+	game.TSide = terrorists.ClanName()
+}
+
+//TODO: Rewrite
+//
+//func (game *Game) PlayerKilled(victim, killer, assister *common.Player, isFlashAssist bool) {
+//	killerTeamAliveMembers := 0
+//
+//	if killer != nil {
+//		killerTeamStats := game.CurrentRound.TeamStats[killer.TeamState.ClanName()]
+//		killerStats := game.CurrentRound.AllPlayersStats[killer.SteamID64]
+//
+//		// Clutch check
+//		if !game.CurrentRound.PostWinCon && killerTeamStats.MembersAlive == 1 {
+//			if !killerStats.Clutch.IsInClutch {
+//				killerStats.Clutch = NewClutchAttempt(game.CurrentRound.RoundNum, victimTeamStats.MembersAlive)
+//			}
+//		}
+//
+//		killerTeamStats.Kill(victimTeamStats.MembersAlive - 1)
+//
+//		if killerStats.Clutch.IsInClutch && victimTeamStats.MembersAlive-1 == 0 {
+//			killerStats.Clutch.IsSuccessful = true
+//		}
+//	}
+//
+//
+//
+//
+//	if assister != nil {
+//		game.CurrentRound.AllPlayersStats[assister.SteamID64].Assist(isFlashAssist)
+//	}
+//
+//	// Add support damage
+//	for player, damage := range game.CurrentRound.AllPlayersStats[victim.SteamID64].DamageList {
+//		// Award support damage if no killer exists or if supporter isn't the killer
+//		if killer == nil || player != killer.SteamID64 {
+//			game.CurrentRound.AllPlayersStats[player].SupportDamage += damage
+//			//if game.CurrentRound.AllPlayersStats[player].SupportDamage > 60 {
+//			//	game.CurrentRound.AllPlayersStats[player].SupportRound = 1
+//			//}
+//		}
+//	}
+//}
+//
+//func (game *Game) ProcessVictim(victim *common.Player) {
+//	victimTeamStats := game.CurrentRound.TeamStats[victim.TeamState.ClanName()]
+//	deathOrder := victimTeamStats.PlayerKilled()
+//	game.CurrentRound.AllPlayersStats[victim.SteamID64].Death(deathOrder)
+//}
+//
+//func (game *Game) ProcessKiller(killer *common.Player, weapon common.EquipmentType, victimTeamMembersAlive int) {
+//	killerTeamStats := game.CurrentRound.TeamStats[killer.TeamState.ClanName()]
+//	killerStats := game.CurrentRound.AllPlayersStats[killer.SteamID64]
+//
+//	// Clutch check
+//	if !game.CurrentRound.PostWinCon && killerTeamStats.MembersAlive == 1 {
+//		if !killerStats.Clutch.IsInClutch {
+//			killerStats.Clutch = NewClutchAttempt(game.CurrentRound.RoundNum, victimTeamMembersAlive)
+//		}
+//	}
+//
+//	//killerTeamStats.Kill(victimTeamStats.MembersAlive - 1)
+//
+//	if killerStats.Clutch.IsInClutch && victimTeamStats.MembersAlive-1 == 0 {
+//		killerStats.Clutch.IsSuccessful = true
+//	}
+//}
+
+func (game *Game) EndOfMatchProcessing() error {
+	game.Rounds = game.removeInvalidRounds()
+	game.TotalTeamStats = NewTotalTeamStats(game.Teams)
+	for _, round := range game.Rounds {
+		for _, team := range game.Teams {
+			err := game.TotalTeamStats[team.Name].Aggregate(round.TeamStats[team.Name])
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (game *Game) removeInvalidRounds() []*Round {
+	validRounds := make([]*Round, 0)
+	lastProcessedRoundNum := game.Rounds[len(game.Rounds)-1].RoundNum + 1
+	for idx := len(game.Rounds) - 1; idx >= 0; idx-- {
+		round := game.Rounds[idx]
+		if !round.IsValid {
+			continue
+		}
+
+		if round.RoundNum != lastProcessedRoundNum-1 {
+			continue
+		}
+
+		validRounds = append(validRounds, round)
+		lastProcessedRoundNum = round.RoundNum
+	}
+
+	for i, j := 0, len(validRounds)-1; i < j; i, j = i+1, j-1 {
+		validRounds[i], validRounds[j] = validRounds[j], validRounds[i]
+	}
+
+	return validRounds
 }
 
 //	//WinnerClanName           string                  `json:"winnerClanName"`
@@ -807,3 +923,44 @@ func (game *Game) Start(counterTerrorists, terrorists *common.TeamState) {
 //
 //	return
 //}
+
+func (game *Game) CheckLurk(currentTick int, terrorists *common.TeamState) uint64 {
+	lurkerDist := 999999
+	lurkerSteam := uint64(0)
+
+	// process every half a second
+	if currentTick-game.lastCheckedTick < 32 {
+		return 0
+	}
+
+	game.lastCheckedTick = currentTick
+	aliveTerrorists := make([]*common.Player, 0)
+	for _, player := range terrorists.Members() {
+		if player.IsAlive() {
+			aliveTerrorists = append(aliveTerrorists, player)
+		}
+	}
+
+	distances := make(map[uint64]int)
+
+	for i := 0; i < len(aliveTerrorists); i++ {
+		for j := i + 1; j < len(aliveTerrorists); j++ {
+			player := aliveTerrorists[i]
+			teammate := aliveTerrorists[j]
+			dist := int(player.Position().Distance(teammate.Position()))
+			if dist >= 500 {
+				distances[player.SteamID64] += dist
+				distances[teammate.SteamID64] += dist
+			}
+		}
+	}
+
+	for steamID64, distance := range distances {
+		if distance < lurkerDist {
+			lurkerDist = distance
+			lurkerSteam = steamID64
+		}
+	}
+
+	return lurkerSteam
+}
