@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	dem "github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs"
-	"github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs/common"
+	dem "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs"
+	"github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs/common"
 )
 
 type Dictionary map[string]interface{}
@@ -152,7 +152,8 @@ func calculateTeamEquipmentNum(game *Game, team *common.TeamState, equipmentENUM
 			//log.Debug(teamMember.Weapons())
 			//log.Debug(teamMember.AmmoLeft)
 			//gren := teamMember.Inventory[equipmentENUM]
-			equipment += teamMember.AmmoLeft[equipmentENUM]
+			equipment += teamMember.Inventory[equipmentENUM].AmmoReserve()
+			equipment += teamMember.Inventory[equipmentENUM].AmmoInMagazine()
 		}
 	}
 	return equipment
