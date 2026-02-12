@@ -5,10 +5,10 @@ import (
 	"math"
 	"strconv"
 
-	dem "github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs"
-	common "github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs/common"
-	events "github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs/events"
-	"github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs/msgs2"
+	dem "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs"
+	common "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs/common"
+	events "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs/events"
+	"github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs/msg"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -98,17 +98,9 @@ func ProcessDemo(demo io.ReadCloser) (*Game, error) {
 	p := dem.NewParser(demo)
 	defer p.Close()
 
-	//must parse header to get header info
-	header, err := p.ParseHeader()
-	if err != nil {
-		return nil, err
-	}
-
 	//set tick rate
 	game.TickRate = 64
 	log.Debug("Tick rate is", game.TickRate)
-
-	game.TickLength = header.PlaybackTicks
 
 	//---------------FUNCTIONS---------------
 
@@ -131,6 +123,7 @@ func ProcessDemo(demo io.ReadCloser) (*Game, error) {
 
 		//only handling normal length matches
 		game.RoundsToWin = MR + 1
+		game.Result = ""
 
 	}
 
@@ -370,8 +363,8 @@ func ProcessDemo(demo io.ReadCloser) (*Game, error) {
 
 	//-------------ALL OUR EVENTS---------------------
 
-	p.RegisterNetMessageHandler(func(msg *msgs2.CSVCMsg_ServerInfo) {
-		game.MapName = *msg.MapName
+	p.RegisterNetMessageHandler(func(m *msg.CDemoFileHeader) {
+		game.MapName = m.GetMapName()
 	})
 
 	p.RegisterEventHandler(func(e events.PlayerInfo) {
@@ -1105,7 +1098,7 @@ func ProcessDemo(demo io.ReadCloser) (*Game, error) {
 	})
 
 	// Parse to end
-	err = p.ParseToEnd()
+	err := p.ParseToEnd()
 
 	endOfMatchProcessing(game)
 
