@@ -355,6 +355,7 @@ func ProcessDemo(demo io.ReadCloser) (*Game, error) {
 			//game.Flags.RoundIntegrityEndOfficial += 1
 			game.TotalRounds = game.Flags.RoundIntegrityEndOfficial
 			game.Flags.IsGameLive = false
+			game.Result = "Ended"
 		}
 
 		//endRound function functionality
