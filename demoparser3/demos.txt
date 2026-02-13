@@ -1,0 +1,4 @@
+s18-M04-Roombas-vs-PeasantPythons-mid6965-0_de_mirage-2025-10-17_02-08-07.dem.zip
+s18-M04-SandBaggers-vs-Cheetahs-mid6985-0_de_overpass-2025-10-17_02-10-52.dem.zip
+s18-M06-Eagles-vs-SmokeSorcerers-mid7086-0_de_train-2025-10-24_02-07-16.dem.zip
+s18-M06-Marksmen-vs-Demons-mid7092-0_de_nuke-2025-10-21_02-09-54.dem.zip
