@@ -331,6 +331,8 @@ func calculateDerivedFields(game *Game) {
 			playerRatingDeathComponent = 0.21
 		}
 		player.Rating = (0.3 * player.ImpactRating) + (0.35 * (player.KR / killRoundAvg)) + playerRatingDeathComponent + (0.08 * (player.Kast / kastRoundAvg)) + (0.2 * (player.Adr / adrAvg))
+		game.TotalTeamStats[player.TeamClanName].RatingAvg += player.Rating
+		game.TotalTeamStats[player.TeamClanName].Normalizer += 1
 
 		//ctRating
 		if player.CtRounds > 0 {
@@ -385,6 +387,17 @@ func calculateDerivedFields(game *Game) {
 	log.Debug("deathRoundAvg", deathRoundAvg)
 	log.Debug("kastRoundAvg", kastRoundAvg)
 	log.Debug("adrAvg", adrAvg)
+
+	for _, player := range game.TotalPlayerStats {
+		players := float64(game.TotalTeamStats[player.TeamClanName].Normalizer)
+		teamAvg := (game.TotalTeamStats[player.TeamClanName].RatingAvg / players)
+		adjustedAvg := (players*teamAvg - player.Rating) / (players - 1)
+		player.DeltaRating = player.Rating - adjustedAvg
+	}
+
+	for _, team := range game.TotalTeamStats {
+		team.RatingAvg = team.RatingAvg / float64(team.Normalizer)
+	}
 
 	calculateSidedStats(game)
 	return
