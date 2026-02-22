@@ -3,36 +3,28 @@ package main
 import (
 	"io"
 
-	"github.com/csconfederation/demoparser3/events"
+	"github.com/csconfederation/demoparser3/adapter"
+	"github.com/csconfederation/demoparser3/domain"
+	"github.com/csconfederation/demoparser3/domain/services"
 	"github.com/csconfederation/demoparser3/logger"
-	"github.com/csconfederation/demoparser3/types"
-	"github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs"
-	"go.uber.org/zap"
 )
 
-func ProcessDemo(demo io.ReadCloser) (*types.Game, error) {
+func ProcessDemo(demo io.ReadCloser) (error, error) {
 
-	game := types.NewGame()
-	parser := demoinfocs.NewParser(demo)
-	defer func() {
-		if err := parser.Close(); err != nil {
-			logger.Error("Failed to close parser", zap.Error(err))
-		}
-	}()
+	bus := domain.NewEventBus()
+	cscParser := adapter.NewAdapter(demo, bus)
+	gs := services.NewGameService(bus)
 
-	events.RegisterRoundEvents(parser, game)
-	events.RegisterBombEvents(parser, game)
-	events.RegisterPlayerEvents(parser, game)
-	events.RegisterGameEvents(parser, game)
+	bus.Subscribe("GameStart", gs)
+	bus.Subscribe("MatchStart", gs)
+	bus.Subscribe("RoundStart", gs)
 
-	err := parser.ParseToEnd()
-
-	err = game.EndOfMatchProcessing()
+	err := cscParser.Parse()
 
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, err
 	}
 
-	return game, nil
+	return nil, nil
 }
