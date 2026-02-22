@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	demo := "path/to/demo"
+	demo := "demos/s18-M06-Magnolias-vs-TheMolotovs-mid7088-0_de_overpass-2025-10-24_02-09-12.dem"
 
 	file, err := os.Open(demo)
 	if err != nil {
@@ -15,10 +15,9 @@ func main() {
 	}
 	defer file.Close()
 
-	g, err := ProcessDemo(file)
+	_, err = ProcessDemo(file)
 	if err != nil {
 		logger.Error("Failed to parse demo", "error", err)
 	}
-
-	logger.Info(g.CurrentRound.Planter.Name)
+	logger.Info("Done processing demo")
 }
