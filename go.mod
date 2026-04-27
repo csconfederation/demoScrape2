@@ -3,7 +3,7 @@ module github.com/csconfederation/demoScrape2
 go 1.25.7
 
 require (
-	github.com/markus-wa/demoinfocs-golang/v5 v5.1.2
+	github.com/markus-wa/demoinfocs-golang/v5 v5.2.0
 	github.com/sirupsen/logrus v1.9.4
 )
 

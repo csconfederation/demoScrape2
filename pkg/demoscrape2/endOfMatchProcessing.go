@@ -378,7 +378,7 @@ func calculateDerivedFields(game *Game) {
 		log.Debug("player.teamsWinPoints", player.TeamsWinPoints)
 		log.Debug("player.winPointsNormalizer", player.WinPointsNormalizer)
 
-		log.Debug("%+v\n\n", player)
+		log.Debugf("%+v\n\n", player)
 	}
 	log.Debug("impactRoundAvg", impactRoundAvg)
 	log.Debug("killRoundAvg", killRoundAvg)

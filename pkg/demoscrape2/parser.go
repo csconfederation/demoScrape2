@@ -930,7 +930,7 @@ func ProcessDemo(demo io.ReadCloser) (*Game, error) {
 		if e.PenetratedObjects > 0 {
 			wallBang = " (WB)"
 		}
-		log.Debug("%s <%v%s%s> %s at %d flash assist by %s\n", e.Killer, e.Weapon, hs, wallBang, e.Victim, p.GameState().IngameTick(), flashAssister)
+		log.Debugf("%s <%v%s%s> %s at %d flash assist by %s\n", e.Killer, e.Weapon, hs, wallBang, e.Victim, p.GameState().IngameTick(), flashAssister)
 	})
 
 	p.RegisterEventHandler(func(e events.PlayerHurt) {
