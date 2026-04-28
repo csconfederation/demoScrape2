@@ -4,27 +4,46 @@ import (
 	"testing"
 
 	"github.com/csconfederation/demoparser3/domain"
+	"github.com/csconfederation/demoparser3/domain/events"
 	"github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs"
 	demoinfocscommon "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs/common"
+	demoinfocsmsg "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs/msg"
 	dp "github.com/markus-wa/godispatch"
 	"github.com/stretchr/testify/assert"
 )
 
-type fakeParser struct{}
+type fakeParser struct {
+	netHandler func(*demoinfocsmsg.CSVCMsg_ServerInfo)
+}
 
-func (fakeParser) ParseToEnd() error                                    { return nil }
-func (fakeParser) RegisterNetMessageHandler(_ any) dp.HandlerIdentifier { return nil }
-func (fakeParser) RegisterEventHandler(_ any) dp.HandlerIdentifier      { return nil }
-func (fakeParser) GameState() demoinfocs.GameState                      { return nil }
+func (f *fakeParser) ParseToEnd() error { return nil }
+func (f *fakeParser) RegisterNetMessageHandler(handler any) dp.HandlerIdentifier {
+	f.netHandler = handler.(func(*demoinfocsmsg.CSVCMsg_ServerInfo))
+	return nil
+}
+func (f *fakeParser) RegisterEventHandler(_ any) dp.HandlerIdentifier { return nil }
+func (f *fakeParser) GameState() demoinfocs.GameState                 { return nil }
+
+type fakeHandler struct {
+	called bool
+	got    events.Event
+	err    error
+}
+
+func (f *fakeHandler) Handle(event events.Event) error {
+	f.called = true
+	f.got = event
+	return f.err
+}
 
 func TestNewAdapterWithParser(t *testing.T) {
 	bus := domain.NewEventBus()
-
-	adapter := NewAdapterWithParser(fakeParser{}, bus)
+	parser := fakeParser{}
+	adapter := NewAdapterWithParser(&parser, bus)
 
 	assert.NotNil(t, adapter)
-	assert.Equal(t, adapter.parser, fakeParser{})
-	assert.Equal(t, adapter.bus, bus)
+	assert.Same(t, &parser, adapter.parser)
+	assert.Same(t, bus, adapter.bus)
 }
 
 func TestGetSteamID(t *testing.T) {
@@ -63,4 +82,22 @@ func TestIsUtility(t *testing.T) {
 	assert.False(t, gotNil)
 	assert.False(t, gotAK)
 	assert.False(t, gotBomb)
+}
+
+func TestRegisterHandlers_GameStart(t *testing.T) {
+	bus := domain.NewEventBus()
+	parser := fakeParser{}
+	adapter := NewAdapterWithParser(&parser, bus)
+	handler := &fakeHandler{}
+
+	bus.Subscribe("GameStart", handler)
+	adapter.registerGameStart()
+
+	msg := demoinfocsmsg.CSVCMsg_ServerInfo{MapName: new("test")}
+
+	parser.netHandler(&msg)
+
+	assert.True(t, handler.called)
+	got := handler.got.(events.GameStart)
+	assert.Equal(t, "test", got.MapName)
 }
