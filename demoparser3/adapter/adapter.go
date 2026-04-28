@@ -1,6 +1,5 @@
 package adapter
 
-import "C"
 import (
 	"errors"
 	"io"
@@ -40,6 +39,10 @@ func getSteamID(player *demoinfocscommon.Player) uint64 {
 }
 
 func isUtility(weapon *demoinfocscommon.Equipment) bool {
+	if weapon == nil {
+		return false
+	}
+
 	return (weapon.Type == demoinfocscommon.EqHE) || (weapon.Type == demoinfocscommon.EqMolotov) ||
 		(weapon.Type == demoinfocscommon.EqIncendiary) || (weapon.Type == demoinfocscommon.EqSmoke) ||
 		(weapon.Type == demoinfocscommon.EqDecoy)
