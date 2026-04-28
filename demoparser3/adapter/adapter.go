@@ -15,16 +15,20 @@ import (
 )
 
 type Adapter struct {
-	parser demoinfocs.Parser
+	parser demoParser
 	bus    *domain.EventBus
 	err    error
 }
 
-func NewAdapter(demo io.ReadCloser, bus *domain.EventBus) *Adapter {
+func NewAdapterWithParser(parser demoParser, bus *domain.EventBus) *Adapter {
 	return &Adapter{
-		parser: demoinfocs.NewParser(demo),
+		parser: parser,
 		bus:    bus,
 	}
+}
+
+func NewAdapter(demo io.ReadCloser, bus *domain.EventBus) *Adapter {
+	return NewAdapterWithParser(demoinfocs.NewParser(demo), bus)
 }
 
 func getSteamID(player *demoinfocscommon.Player) uint64 {

@@ -82,7 +82,7 @@ func (rs *RoundService) OnRoundEndOfficial() error {
 }
 
 func (rs *RoundService) OnFrameDone(e events.FrameDone) error {
-	if rs.currentRound != nil {
+	if rs.currentRound == nil {
 		return nil
 	}
 
