@@ -86,20 +86,21 @@ func calculatePairwiseDistances(players []*demoinfocscommon.Player) map[uint64]m
 	return distances
 }
 
-func (a *Adapter) RegisterHandlers() error {
-	a.parser.RegisterNetMessageHandler(func(msg *demoinfocsmsg.CSVCMsg_ServerInfo) {
-		err := a.bus.Publish(adapterevents.GameStart{
-			MapName: msg.GetMapName(),
-		})
-		if err != nil {
-			a.err = err
-		}
-	})
-
-	if a.err != nil {
-		return a.err
+func (a *Adapter) setError(err error) {
+	if a.err == nil && err != nil {
+		a.err = err
 	}
+}
 
+func (a *Adapter) registerGameStart() {
+	a.parser.RegisterNetMessageHandler(func(msg *demoinfocsmsg.CSVCMsg_ServerInfo) {
+		a.setError(a.bus.Publish(adapterevents.GameStart{
+			MapName: msg.GetMapName(),
+		}))
+	})
+}
+
+func (a *Adapter) registerMatchStart() {
 	a.parser.RegisterEventHandler(func(e demoinfocsevents.MatchStart) {
 		CTSide := a.parser.GameState().TeamCounterTerrorists()
 		TSide := a.parser.GameState().TeamTerrorists()
@@ -113,22 +114,16 @@ func (a *Adapter) RegisterHandlers() error {
 		for _, player := range TSide.Members() {
 			TMembers[player.SteamID64] = player.Name
 		}
-
-		err := a.bus.Publish(adapterevents.MatchStart{
+		a.setError(a.bus.Publish(adapterevents.MatchStart{
 			CTSide:    CTSide.ClanName(),
 			TSide:     TSide.ClanName(),
 			CTMembers: CTMembers,
 			TMembers:  TMembers,
-		})
-		if err != nil {
-			a.err = err
-		}
+		}))
 	})
+}
 
-	if a.err != nil {
-		return a.err
-	}
-
+func (a *Adapter) registerRoundFreezeTimeEnd() {
 	a.parser.RegisterEventHandler(func(e demoinfocsevents.RoundFreezetimeEnd) {
 		if !isGameLive(a.parser.GameState()) {
 			return
@@ -142,47 +137,35 @@ func (a *Adapter) RegisterHandlers() error {
 		for _, member := range a.parser.GameState().TeamTerrorists().Members() {
 			TMembers = append(TMembers, member.SteamID64)
 		}
-		err := a.bus.Publish(adapterevents.RoundStart{
+		a.setError(a.bus.Publish(adapterevents.RoundStart{
 			TotalRoundsPlayed:  a.parser.GameState().TotalRoundsPlayed(),
 			ConnectedCTPlayers: CTMembers,
 			ConnectedTPlayers:  TMembers,
-		})
-		if err != nil {
-			a.err = err
-		}
+		}))
 	})
+}
 
+func (a *Adapter) registerRoundEnd() {
 	a.parser.RegisterEventHandler(func(e demoinfocsevents.RoundEnd) {
-		err := a.bus.Publish(adapterevents.RoundEnd{
+		a.setError(a.bus.Publish(adapterevents.RoundEnd{
 			WinningTeamName: e.WinnerState.ClanName(),
-		})
-		if err != nil {
-			a.err = err
-		}
+		}))
 	})
+}
 
+func (a *Adapter) registerRoundEndOfficial() {
 	a.parser.RegisterEventHandler(func(e demoinfocsevents.RoundEndOfficial) {
-		err := a.bus.Publish(adapterevents.RoundEndOfficial{})
-		if err != nil {
-			a.err = err
-		}
+		a.setError(a.bus.Publish(adapterevents.RoundEndOfficial{}))
 	})
+}
 
-	if a.err != nil {
-		return a.err
-	}
-
+func (a *Adapter) registerGameHalfEnded() {
 	a.parser.RegisterEventHandler(func(e demoinfocsevents.GameHalfEnded) {
-		err := a.bus.Publish(adapterevents.GameHalfEnded{})
-		if err != nil {
-			a.err = err
-		}
+		a.setError(a.bus.Publish(adapterevents.GameHalfEnded{}))
 	})
+}
 
-	if a.err != nil {
-		return a.err
-	}
-
+func (a *Adapter) registerFrameDone() {
 	a.parser.RegisterEventHandler(func(e demoinfocsevents.FrameDone) {
 		if !isGameLive(a.parser.GameState()) {
 			return
@@ -190,38 +173,28 @@ func (a *Adapter) RegisterHandlers() error {
 		tMembers := a.parser.GameState().TeamTerrorists().Members()
 		aliveTMembers := filterAlive(tMembers)
 		distances := calculatePairwiseDistances(aliveTMembers)
-		err := a.bus.Publish(adapterevents.FrameDone{
+		a.setError(a.bus.Publish(adapterevents.FrameDone{
 			Tick:      a.parser.GameState().IngameTick(),
 			Distances: distances,
-		})
-		if err != nil {
-			a.err = err
-		}
+		}))
 	})
+}
 
-	if a.err != nil {
-		return a.err
-	}
-
+func (a *Adapter) registerScoreUpdated() {
 	// Called before roundend
 	a.parser.RegisterEventHandler(func(e demoinfocsevents.ScoreUpdated) {
 		if !isGameLive(a.parser.GameState()) {
 			return
 		}
-		err := a.bus.Publish(adapterevents.ScoreUpdated{
+		a.setError(a.bus.Publish(adapterevents.ScoreUpdated{
 			TeamName: e.TeamState.ClanName(),
 			OldScore: e.OldScore,
 			NewScore: e.NewScore,
-		})
-		if err != nil {
-			a.err = err
-		}
+		}))
 	})
+}
 
-	if a.err != nil {
-		return a.err
-	}
-
+func (a *Adapter) registerGrenadeProjectileThrow() {
 	a.parser.RegisterEventHandler(func(e demoinfocsevents.GrenadeProjectileThrow) {
 		if !isGameLive(a.parser.GameState()) {
 			return
@@ -230,45 +203,32 @@ func (a *Adapter) RegisterHandlers() error {
 		if utility == demoinfocscommon.EqMolotov.String() || utility == demoinfocscommon.EqIncendiary.String() {
 			utility = "fire"
 		}
-		err := a.bus.Publish(adapterevents.UtilityThrown{
+		a.setError(a.bus.Publish(adapterevents.UtilityThrown{
 			ThrowerID:   getSteamID(e.Projectile.Thrower),
 			UtilityType: strings.ToLower(utility),
-		})
-		if err != nil {
-			a.err = err
-		}
+		}))
 	})
+}
 
-	if a.err != nil {
-		return a.err
-	}
-
+func (a *Adapter) registerKill() {
 	a.parser.RegisterEventHandler(func(e demoinfocsevents.Kill) {
 		if !isGameLive(a.parser.GameState()) {
 			return
 		}
 
 		if e.Victim != nil {
-			err := a.bus.Publish(adapterevents.Death{
+			a.setError(a.bus.Publish(adapterevents.Death{
 				VictimID:       getSteamID(e.Victim),
 				VictimTeamName: e.Victim.TeamState.ClanName(),
-			})
-			if err != nil {
-				a.err = err
-				return
-			}
+			}))
 
 			if e.Assister != nil && e.Assister.Team != e.Victim.Team {
-				err := a.bus.Publish(adapterevents.Assist{
+				a.setError(a.bus.Publish(adapterevents.Assist{
 					VictimID:        getSteamID(e.Victim),
 					AssisterID:      getSteamID(e.Assister),
 					IsAssistedFlash: e.AssistedFlash,
 					Tick:            a.parser.GameState().IngameTick(),
-				})
-				if err != nil {
-					a.err = err
-					return
-				}
+				}))
 			}
 
 			if e.Killer != nil {
@@ -280,52 +240,36 @@ func (a *Adapter) RegisterHandlers() error {
 				if weapon == demoinfocscommon.EqAWP {
 					isAWPKill = true
 				}
-				err = a.bus.Publish(adapterevents.Kill{
+				a.setError(a.bus.Publish(adapterevents.Kill{
 					KillerID:       getSteamID(e.Killer),
 					VictimID:       getSteamID(e.Victim),
 					IsAWPKill:      isAWPKill,
 					IsHeadshot:     e.IsHeadshot,
 					Tick:           a.parser.GameState().IngameTick(),
 					KillerTeamName: e.Killer.TeamState.ClanName(),
-				})
-				if err != nil {
-					a.err = err
-					return
-				}
+				}))
 			}
 		}
 	})
+}
 
-	if a.err != nil {
-		return a.err
-	}
-
+func (a *Adapter) registerBombExplode() {
 	a.parser.RegisterEventHandler(func(e demoinfocsevents.BombExplode) {
-		err := a.bus.Publish(adapterevents.BombExplode{
+		a.setError(a.bus.Publish(adapterevents.BombExplode{
 			PlanterID: getSteamID(e.Player),
-		})
-		if err != nil {
-			a.err = err
-		}
+		}))
 	})
+}
 
-	if a.err != nil {
-		return a.err
-	}
-
+func (a *Adapter) registerBombDefused() {
 	a.parser.RegisterEventHandler(func(e demoinfocsevents.BombDefused) {
-		err := a.bus.Publish(adapterevents.BombDefused{
+		a.setError(a.bus.Publish(adapterevents.BombDefused{
 			DefuserID: getSteamID(e.Player),
-		})
-		if err != nil {
-			a.err = err
-		}
+		}))
 	})
+}
 
-	if a.err != nil {
-		return a.err
-	}
-
+func (a *Adapter) registerPlayerHurt() {
 	a.parser.RegisterEventHandler(func(e demoinfocsevents.PlayerHurt) {
 		if e.Weapon.Type == demoinfocscommon.EqBomb {
 			return
@@ -340,7 +284,7 @@ func (a *Adapter) RegisterHandlers() error {
 			isHEDamage = true
 		}
 
-		err := a.bus.Publish(adapterevents.PlayerHurt{
+		a.setError(a.bus.Publish(adapterevents.PlayerHurt{
 			AttackerID:   getSteamID(e.Player),
 			VictimID:     getSteamID(e.Player),
 			Weapon:       e.WeaponString,
@@ -348,16 +292,11 @@ func (a *Adapter) RegisterHandlers() error {
 			IsUtility:    isUtility(e.Weapon),
 			IsFireDamage: isFireDamage,
 			IsHEDamage:   isHEDamage,
-		})
-		if err != nil {
-			a.err = err
-		}
+		}))
 	})
+}
 
-	if a.err != nil {
-		return a.err
-	}
-
+func (a *Adapter) registerPlayerFlashed() {
 	a.parser.RegisterEventHandler(func(e demoinfocsevents.PlayerFlashed) {
 		if e.Attacker.Team == e.Player.Team {
 			return
@@ -367,22 +306,32 @@ func (a *Adapter) RegisterHandlers() error {
 			return
 		}
 
-		err := a.bus.Publish(adapterevents.PlayerFlashed{
+		a.setError(a.bus.Publish(adapterevents.PlayerFlashed{
 			AttackerID:    getSteamID(e.Attacker),
 			VictimID:      getSteamID(e.Player),
 			FlashDuration: e.FlashDuration().Seconds(),
 			Tick:          a.parser.GameState().IngameTick(),
-		})
-		if err != nil {
-			a.err = err
-		}
+		}))
 	})
+}
 
-	if a.err != nil {
-		return a.err
-	}
+func (a *Adapter) RegisterHandlers() error {
+	a.registerGameStart()
+	a.registerMatchStart()
+	a.registerRoundFreezeTimeEnd()
+	a.registerRoundEnd()
+	a.registerRoundEndOfficial()
+	a.registerGameHalfEnded()
+	a.registerFrameDone()
+	a.registerScoreUpdated()
+	a.registerGrenadeProjectileThrow()
+	a.registerKill()
+	a.registerBombExplode()
+	a.registerBombDefused()
+	a.registerPlayerHurt()
+	a.registerPlayerFlashed()
 
-	return nil
+	return a.err
 }
 
 func (a *Adapter) Parse() error {
