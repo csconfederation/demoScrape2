@@ -8,12 +8,13 @@ import (
 )
 
 type TeamStatsService struct {
-	CTSide   string
-	TSide    string
-	CTStats  *stats.TeamStats
-	TStats   *stats.TeamStats
-	roundCtx *models.RoundContext
-	bus      *domain.EventBus
+	CTSide             string
+	TSide              string
+	CTStats            *stats.TeamStats
+	TStats             *stats.TeamStats
+	roundCtx           *models.RoundContext
+	bus                *domain.EventBus
+	pendingStatsByTeam map[string]*stats.TeamStats
 }
 
 func (tss *TeamStatsService) Handle(event events.Event) error {
@@ -26,8 +27,8 @@ func (tss *TeamStatsService) Handle(event events.Event) error {
 		return tss.SetPistolRound()
 	case events.GameHalfEnded:
 		return tss.OnGameHalfEnd()
-	case events.RoundEndOfficial:
-		return tss.OnRoundEndOfficial()
+	case events.PublishPendingStats:
+		return tss.OnPublishPendingStats(e)
 	case events.RoundEnd:
 		return tss.OnRoundEnd(e)
 	//case events.Kill:
@@ -67,17 +68,22 @@ func (tss *TeamStatsService) OnGameHalfEnd() error {
 	return nil
 }
 
-func (tss *TeamStatsService) OnRoundEndOfficial() error {
+func (tss *TeamStatsService) OnPublishPendingStats(e events.PublishPendingStats) error {
 	statsByTeam := make(map[string]*stats.TeamStats)
 	statsByTeam[tss.CTSide] = tss.CTStats
 	statsByTeam[tss.TSide] = tss.TStats
-	err := tss.bus.Publish(events.RoundEndTeamStats{
-		StatsByTeam: statsByTeam,
-	})
 
-	if err != nil {
-		return err
+	if e.PublishPending {
+		err := tss.bus.Publish(events.RoundEndTeamStats{
+			StatsByTeam: statsByTeam,
+		})
+		if err != nil {
+			return err
+		}
+	} else {
+		tss.pendingStatsByTeam = statsByTeam
 	}
+	
 	return nil
 }
 

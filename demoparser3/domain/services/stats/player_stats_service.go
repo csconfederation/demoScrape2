@@ -8,13 +8,14 @@ import (
 )
 
 type PlayerStatsService struct {
-	players           map[uint64]string
-	statsByPlayer     map[uint64]*stats.PlayerStats
-	roundCtx          *models.RoundContext
-	cTSide            string
-	tSide             string
-	lastLurkCheckTick int
-	bus               *domain.EventBus
+	players              map[uint64]string
+	pendingStatsByPlayer map[uint64]*stats.PlayerStats
+	statsByPlayer        map[uint64]*stats.PlayerStats
+	roundCtx             *models.RoundContext
+	cTSide               string
+	tSide                string
+	lastLurkCheckTick    int
+	bus                  *domain.EventBus
 }
 
 func NewPlayerStatsService(bus *domain.EventBus) *PlayerStatsService {
@@ -36,8 +37,8 @@ func (pss *PlayerStatsService) Handle(event events.Event) error {
 		return pss.OnBombExplode(e)
 	case events.BombDefused:
 		return pss.OnBombDefused(e)
-	case events.RoundEndOfficial:
-		return pss.OnRoundEndOfficial()
+	case events.PublishPendingStats:
+		return pss.OnPublishPendingStats(e)
 	case events.PlayerHurt:
 		return pss.OnPlayerHurt(e)
 	case events.PlayerFlashed:
@@ -95,12 +96,17 @@ func (pss *PlayerStatsService) OnBombDefused(e events.BombDefused) error {
 	return nil
 }
 
-func (pss *PlayerStatsService) OnRoundEndOfficial() error {
-	err := pss.bus.Publish(events.RoundEndPlayerStats{
-		StatsByPlayer: pss.statsByPlayer,
-	})
-	if err != nil {
-		return err
+func (pss *PlayerStatsService) OnPublishPendingStats(e events.PublishPendingStats) error {
+	if e.PublishPending {
+		err := pss.bus.Publish(events.RoundEndPlayerStats{
+			StatsByPlayer: pss.pendingStatsByPlayer,
+		})
+
+		if err != nil {
+			return err
+		}
+	} else {
+		pss.pendingStatsByPlayer = pss.statsByPlayer
 	}
 	return nil
 }

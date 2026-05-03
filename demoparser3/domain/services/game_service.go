@@ -43,12 +43,26 @@ func (gs *GameService) OnMatchStart() error {
 func (gs *GameService) FinalizeRound(e events.FinalizeRound) error {
 	// if the prev round has the same round number as the current finished one, the prev round was reset.
 	// might be able to optimize it by storing only previous round instead of all so far
+
+	// if prev was reset, just overwrite in store
+	// if round num differs, commit previous one, store current temporarily.
+	publishPending := false
 	if len(gs.game.Rounds) != 0 {
 		prevRound := gs.game.Rounds[len(gs.game.Rounds)-1]
 		if prevRound.RoundNum == e.Round.RoundNum {
 			gs.game.Rounds = gs.game.Rounds[:len(gs.game.Rounds)-1]
+		} else {
+			publishPending = true
 		}
 	}
 	gs.game.Rounds = append(gs.game.Rounds, e.Round)
+
+	err := gs.bus.Publish(events.PublishPendingStats{
+		PublishPending: publishPending,
+	})
+
+	if err != nil {
+		return err
+	}
 	return nil
 }

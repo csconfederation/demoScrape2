@@ -39,3 +39,7 @@ type CheckLurk struct {
 	Tick      int
 	Distances map[uint64]map[uint64]float64
 }
+
+type PublishPendingStats struct {
+	PublishPending bool
+}
