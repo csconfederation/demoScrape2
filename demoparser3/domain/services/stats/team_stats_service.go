@@ -83,27 +83,30 @@ func (tss *TeamStatsService) OnPublishPendingStats(e events.PublishPendingStats)
 	} else {
 		tss.pendingStatsByTeam = statsByTeam
 	}
-	
+
 	return nil
 }
 
 func (tss *TeamStatsService) OnRoundEnd(e events.RoundEnd) error {
-	if e.WinningTeamName == tss.CTSide {
-		if tss.CTStats.ClutchAttempt != (stats.ClutchAttempt{}) {
-			tss.CTStats.ClutchAttempt.IsSuccessful = true
-		}
-		if tss.TStats.ClutchAttempt != (stats.ClutchAttempt{}) {
-			tss.TStats.ClutchAttempt.IsSuccessful = false
-		}
-	} else if e.WinningTeamName == tss.TSide {
-		if tss.TStats.ClutchAttempt != (stats.ClutchAttempt{}) {
-			tss.TStats.ClutchAttempt.IsSuccessful = true
-		}
-		if tss.CTStats.ClutchAttempt != (stats.ClutchAttempt{}) {
-			tss.CTStats.ClutchAttempt.IsSuccessful = false
-		}
+	winner, loser := tss.getWinnerLoser(e.WinningTeamName)
+	if winner == nil {
+		return nil
 	}
+	winner.ClutchAttempt.IsSuccessful = winner.ClutchAttempt.PlayerID != 0
+	loser.ClutchAttempt.IsSuccessful = false
+	winner.PistolRounds.Won = winner.PistolRounds.Played
+	winner.FiveVFour.Won = winner.FiveVFour.Played
+	winner.FourVFive.Won = winner.FourVFive.Played
 	return nil
+}
+
+func (tss *TeamStatsService) getWinnerLoser(winningTeam string) (*stats.TeamStats, *stats.TeamStats) {
+	if winningTeam == tss.CTSide {
+		return tss.CTStats, tss.TStats
+	} else if winningTeam == tss.TSide {
+		return tss.TStats, tss.CTStats
+	}
+	return nil, nil
 }
 
 //func (tss *TeamStatsService) OnKill(e events.Kill) error {
@@ -183,8 +186,8 @@ func (tss *TeamStatsService) handleCTSideDeath(victimID uint64, isOpeningKill bo
 	tss.CTStats.MembersAlive = removePlayerID(tss.CTStats.MembersAlive, victimID)
 	tss.CTStats.DeathPlacement[victimID] = float64(len(tss.CTStats.TeamMembers) - len(tss.CTStats.MembersAlive))
 	if isOpeningKill {
-		tss.CTStats.FourVFive.IsSet = true
-		tss.TStats.FiveVFour.IsSet = true
+		tss.CTStats.FourVFive.Played = 1
+		tss.TStats.FiveVFour.Played = 1
 	}
 }
 
@@ -192,8 +195,8 @@ func (tss *TeamStatsService) handleTSideDeath(victimID uint64, isOpeningKill boo
 	tss.TStats.MembersAlive = removePlayerID(tss.TStats.MembersAlive, victimID)
 	tss.TStats.DeathPlacement[victimID] = float64(len(tss.TStats.TeamMembers) - len(tss.TStats.MembersAlive))
 	if isOpeningKill {
-		tss.TStats.FourVFive.IsSet = true
-		tss.CTStats.FiveVFour.IsSet = true
+		tss.TStats.FourVFive.Played = 1
+		tss.CTStats.FiveVFour.Played = 1
 	}
 }
 
