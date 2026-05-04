@@ -37,12 +37,16 @@ type Death struct {
 }
 
 type Kill struct {
-	KillerID       uint64
-	VictimID       uint64
-	IsAWPKill      bool
-	IsHeadshot     bool
-	Tick           int
-	KillerTeamName string
+	KillerID             uint64
+	VictimID             uint64
+	IsAWPKill            bool
+	IsHeadshot           bool
+	Tick                 int
+	KillerTeamName       string
+	IsAssisted           bool
+	FlashAssisted        bool
+	KillerEquipmentValue float64
+	VictimEquipmentValue float64
 }
 
 type RoundStart struct {

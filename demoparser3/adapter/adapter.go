@@ -216,6 +216,9 @@ func (a *Adapter) registerKill() {
 			return
 		}
 
+		isAssisted := false
+		flashAssisted := false
+
 		if e.Victim != nil {
 			a.setError(a.bus.Publish(adapterevents.Death{
 				VictimID:       getSteamID(e.Victim),
@@ -223,6 +226,8 @@ func (a *Adapter) registerKill() {
 			}))
 
 			if e.Assister != nil && e.Assister.Team != e.Victim.Team {
+				isAssisted = true
+				flashAssisted = e.AssistedFlash
 				a.setError(a.bus.Publish(adapterevents.Assist{
 					VictimID:        getSteamID(e.Victim),
 					AssisterID:      getSteamID(e.Assister),
@@ -241,12 +246,16 @@ func (a *Adapter) registerKill() {
 					isAWPKill = true
 				}
 				a.setError(a.bus.Publish(adapterevents.Kill{
-					KillerID:       getSteamID(e.Killer),
-					VictimID:       getSteamID(e.Victim),
-					IsAWPKill:      isAWPKill,
-					IsHeadshot:     e.IsHeadshot,
-					Tick:           a.parser.GameState().IngameTick(),
-					KillerTeamName: e.Killer.TeamState.ClanName(),
+					KillerID:             getSteamID(e.Killer),
+					VictimID:             getSteamID(e.Victim),
+					IsAWPKill:            isAWPKill,
+					IsHeadshot:           e.IsHeadshot,
+					Tick:                 a.parser.GameState().IngameTick(),
+					KillerTeamName:       e.Killer.TeamState.ClanName(),
+					IsAssisted:           isAssisted,
+					FlashAssisted:        flashAssisted,
+					KillerEquipmentValue: float64(e.Killer.EquipmentValueCurrent()),
+					VictimEquipmentValue: float64(e.Victim.EquipmentValueCurrent()),
 				}))
 			}
 		}

@@ -15,6 +15,7 @@ type PlayerStatsService struct {
 	cTSide               string
 	tSide                string
 	lastLurkCheckTick    int
+	isOpeningKill        bool
 	bus                  *domain.EventBus
 }
 
@@ -78,6 +79,7 @@ func (pss *PlayerStatsService) OnNewRound(e events.NewRound) error {
 	for steamID, name := range pss.players {
 		pss.statsByPlayer[steamID] = stats.NewPlayerStats(name)
 	}
+	pss.isOpeningKill = true
 	return nil
 }
 
@@ -149,6 +151,14 @@ func (pss *PlayerStatsService) OnKill(e events.Kill) error {
 	pss.statsByPlayer[e.KillerID].KillsList[e.VictimID] = e.Tick
 	pss.statsByPlayer[e.KillerID].KASTRound = 1
 	pss.statsByPlayer[e.KillerID].RoundsWithKills = 1
+
+	if pss.isOpeningKill {
+		pss.statsByPlayer[e.KillerID].OpeningKill = 1
+		pss.statsByPlayer[e.KillerID].Entries = 1
+		pss.statsByPlayer[e.VictimID].OpeningDeath = 1
+		pss.isOpeningKill = false
+	}
+
 	if e.IsAWPKill {
 		pss.statsByPlayer[e.KillerID].AWPKills += 1
 		err := pss.bus.Publish(events.CTAWPKill{
@@ -162,8 +172,9 @@ func (pss *PlayerStatsService) OnKill(e events.Kill) error {
 		pss.statsByPlayer[e.KillerID].Headshots += 1
 	}
 	pss.checkForTrades(e.VictimID, e.Tick, e.KillerID)
-	// TODO: Idk how to handle this
-	//pss.statsByPlayer[e.KillerID].ImpactPoints += pss.calculateKillValue(e.KillerTeamName)
+
+	pss.statsByPlayer[e.KillerID].ImpactPoints += pss.calculateKillValue(e.KillerTeamName, e.IsAssisted, e.KillerID,
+		e.FlashAssisted, e.KillerEquipmentValue, e.VictimEquipmentValue)
 	return nil
 }
 
@@ -208,6 +219,7 @@ func (pss *PlayerStatsService) OnAssist(e events.Assist) error {
 	pss.statsByPlayer[e.AssisterID].EAC += 1
 	pss.statsByPlayer[e.AssisterID].KASTRound = 1
 	pss.statsByPlayer[e.AssisterID].SupportRound = 1
+	pss.statsByPlayer[e.AssisterID].ImpactPoints += 0.15
 	if e.IsAssistedFlash {
 		pss.statsByPlayer[e.AssisterID].FlashAssists += 1
 	} else if float64(e.Tick) < pss.statsByPlayer[e.VictimID].MostRecentFlashTickValue {
@@ -223,62 +235,100 @@ func (pss *PlayerStatsService) flashAssist(victimID uint64) {
 	pss.statsByPlayer[flasherID].SupportRound = 1
 }
 
-func (pss *PlayerStatsService) calculateKillValue(killerTeam string, isOpeningKill bool) float64 {
-	//baseValue := pss.getBaseKillValue(killerTeam)
-	//multiplier := pss.getKillMultiplier(isOpeningKill)
-	//ecoModifier := pss.getEcoModifier()
-	//return baseValue * multiplier * ecoModifier
-	return 0
+func (pss *PlayerStatsService) calculateKillValue(killerTeam string, isAssisted bool, killerID uint64,
+	flashAssisted bool, killerEquipmentValue float64, victimEquipmentValue float64) float64 {
+	baseValue := pss.getBaseKillValue(killerTeam, isAssisted)
+	multiplier := pss.getKillMultiplier(killerTeam, killerID, flashAssisted)
+	ecoModifier := pss.getEcoModifier(killerEquipmentValue, victimEquipmentValue)
+	return baseValue * multiplier * ecoModifier
 }
 
-//func (pss *PlayerStatsService) getBaseKillValue(killerTeam string) float64 {
-//	if pss.roundCtx.IsPrePlant {
-//		if killerTeam == pss.tSide {
-//			// Taking site by T
-//			return 1.2
-//		}
-//
-//		// Site defense by CT
-//		return 1.0
-//	}
-//
-//	if pss.roundCtx.IsPostPlant {
-//		if killerTeam == pss.tSide {
-//			// Site defense by T
-//			return 1.0
-//		}
-//
-//		// Retake by CT
-//		return 1.2
-//	}
-//
-//	if pss.roundCtx.Winner == pss.tSide {
-//		if killerTeam == pss.tSide {
-//			// Chase by T
-//			return 0.8
-//		}
-//
-//		// Exit by CT
-//		return 0.6
-//	}
-//
-//	// CT won
-//	if killerTeam == pss.tSide {
-//		// T kill in lost round
-//		return 0.5
-//	}
-//
-//	// CT kill in won round
-//	if pss.roundCtx.IsPostPlant {
-//		// Ts got money for planting
-//		return 0.6
-//	}
-//	return 0.8
-//}
-//
-//func (pss *PlayerStatsService) getKillMultiplier(isOpeningKill bool) float64 {
-//	return nil
-//}
+func (pss *PlayerStatsService) getBaseKillValue(killerTeam string, isAssisted bool) float64 {
+	killValue := 1.0
+
+	if pss.roundCtx.IsPrePlant {
+		if killerTeam == pss.tSide {
+			// Taking site by T
+			killValue += 0.2
+		}
+	} else if pss.roundCtx.IsPostPlant && !pss.roundCtx.IsPostRoundEnd {
+		if killerTeam == pss.cTSide {
+			// Site retake by CT
+			killValue += 0.2
+		}
+	} else if pss.roundCtx.Winner == pss.tSide {
+		if killerTeam == pss.tSide {
+			// Chase by T
+			killValue -= 0.2
+		} else {
+			// Exit by CT
+			killValue -= 0.4
+		}
+	} else {
+		// CT won
+		if killerTeam == pss.tSide {
+			// T kill in lost round
+			killValue -= 0.5
+		} else {
+			// CT kill in won round
+			if pss.roundCtx.IsPostPlant {
+				// Ts got money for planting
+				killValue -= 0.4
+			} else {
+				killValue -= 0.2
+			}
+		}
+	}
+
+	if isAssisted {
+		killValue -= 0.15
+	}
+
+	return killValue
+}
+
+func (pss *PlayerStatsService) getKillMultiplier(killerTeam string, killerID uint64, flashAssisted bool) float64 {
+	multiplier := 1.0
+
+	if pss.isOpeningKill {
+		if killerTeam == pss.tSide {
+			// T entry/opener
+			if pss.roundCtx.IsPrePlant {
+				multiplier += 0.8
+			} else {
+				multiplier += 0.3
+			}
+		} else {
+			// CT opener
+			multiplier += 0.5
+		}
+	} else if pss.statsByPlayer[killerID].Trades > 0 {
+		multiplier += 0.3
+	}
+
+	if flashAssisted {
+		multiplier += 0.2
+	}
+
+	return multiplier
+}
+
+func (pss *PlayerStatsService) getEcoModifier(killerEquipmentValue float64, victimEquipmentValue float64) float64 {
+	ratio := victimEquipmentValue / killerEquipmentValue
+	modifier := 1.0
+
+	if ratio > 4 {
+		modifier += 0.25
+	} else if ratio > 2 {
+		modifier += 0.14
+	} else if ratio < 0.25 {
+		modifier -= 0.25
+	} else if ratio < 0.5 {
+		modifier -= 0.14
+	}
+
+	return modifier
+}
 
 func (pss *PlayerStatsService) OnUpdateRoundContext(e events.UpdateRoundContext) error {
 	pss.roundCtx = e.RoundContext
