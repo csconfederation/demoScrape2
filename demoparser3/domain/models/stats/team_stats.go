@@ -26,8 +26,9 @@ type TeamStats struct {
 	PistolRounds   playedWon          `json:"pistolRounds" end_of_match_sum:"true"`
 	CTRounds       playedWon          `json:"ctRounds" end_of_match_sum:"true"`
 	TRounds        playedWon          `json:"tRounds" end_of_match_sum:"true"`
-	ClutchAttempt  ClutchAttempt
+	ClutchAttempt  *ClutchAttempt
 	Saves          int
+	Clutches       int
 }
 
 func NewTeamStats(teamName string, connectedTeamPlayers []uint64) *TeamStats {
@@ -50,7 +51,9 @@ func (ts *TeamStats) Aggregate(newStats *TeamStats) {
 	ts.FiveVFour.add(newStats.FiveVFour)
 	ts.FourVFive.add(newStats.FourVFive)
 	ts.Saves += newStats.Saves
-	// ts.Clutches
+	if newStats.ClutchAttempt != nil && newStats.ClutchAttempt.IsSuccessful {
+		ts.Clutches += 1
+	}
 	ts.CTRounds.add(newStats.CTRounds)
 	ts.TRounds.add(newStats.TRounds)
 }

@@ -17,12 +17,14 @@ type PlayerStatsService struct {
 	lastLurkCheckTick    int
 	isOpeningKill        bool
 	bus                  *domain.EventBus
+	sideByPlayer         map[uint64]stats.Side
 }
 
 func NewPlayerStatsService(bus *domain.EventBus) *PlayerStatsService {
 	return &PlayerStatsService{
 		statsByPlayer: make(map[uint64]*stats.PlayerStats),
 		bus:           bus,
+		sideByPlayer:  make(map[uint64]stats.Side),
 	}
 }
 
@@ -62,10 +64,12 @@ func (pss *PlayerStatsService) OnMatchStart(e events.MatchStart) error {
 
 	for steamID, name := range e.CTMembers {
 		pss.players[steamID] = name
+		pss.sideByPlayer[steamID] = stats.CounterTerrorists
 	}
 
 	for steamID, name := range e.TMembers {
 		pss.players[steamID] = name
+		pss.sideByPlayer[steamID] = stats.Terrorists
 	}
 
 	pss.cTSide = e.CTSide
@@ -77,7 +81,7 @@ func (pss *PlayerStatsService) OnMatchStart(e events.MatchStart) error {
 func (pss *PlayerStatsService) OnNewRound(e events.NewRound) error {
 	pss.roundCtx = e.RoundContext
 	for steamID, name := range pss.players {
-		pss.statsByPlayer[steamID] = stats.NewPlayerStats(name)
+		pss.statsByPlayer[steamID] = stats.NewPlayerStats(name, pss.sideByPlayer[steamID])
 	}
 	pss.isOpeningKill = true
 	return nil
@@ -149,13 +153,13 @@ func (pss *PlayerStatsService) OnDeath(e events.Death) error {
 
 func (pss *PlayerStatsService) OnKill(e events.Kill) error {
 	pss.statsByPlayer[e.KillerID].KillsList[e.VictimID] = e.Tick
-	pss.statsByPlayer[e.KillerID].KASTRound = 1
+	pss.statsByPlayer[e.KillerID].KASTRounds = 1
 	pss.statsByPlayer[e.KillerID].RoundsWithKills = 1
 
 	if pss.isOpeningKill {
-		pss.statsByPlayer[e.KillerID].OpeningKill = 1
+		pss.statsByPlayer[e.KillerID].OpeningKills = 1
 		pss.statsByPlayer[e.KillerID].Entries = 1
-		pss.statsByPlayer[e.VictimID].OpeningDeath = 1
+		pss.statsByPlayer[e.VictimID].OpeningDeaths = 1
 		pss.isOpeningKill = false
 	}
 
@@ -173,7 +177,7 @@ func (pss *PlayerStatsService) OnKill(e events.Kill) error {
 	}
 	pss.checkForTrades(e.VictimID, e.Tick, e.KillerID)
 
-	pss.statsByPlayer[e.KillerID].ImpactPoints += pss.calculateKillValue(e.KillerTeamName, e.IsAssisted, e.KillerID,
+	pss.statsByPlayer[e.KillerID].KillPoints += pss.calculateKillValue(e.KillerTeamName, e.IsAssisted, e.KillerID,
 		e.FlashAssisted, e.KillerEquipmentValue, e.VictimEquipmentValue)
 	return nil
 }
@@ -183,12 +187,12 @@ func (pss *PlayerStatsService) addSupportDamage(victimID uint64, killerID uint64
 		if killerID != 0 && steam != killerID {
 			pss.statsByPlayer[steam].SupportDamage += damage
 			if pss.statsByPlayer[steam].SupportDamage > 60 {
-				pss.statsByPlayer[steam].SupportRound = 1
+				pss.statsByPlayer[steam].SupportRounds = 1
 			}
 		} else if killerID == 0 {
 			pss.statsByPlayer[steam].SupportDamage += damage
 			if pss.statsByPlayer[steam].SupportDamage > 60 {
-				pss.statsByPlayer[steam].SupportRound = 1
+				pss.statsByPlayer[steam].SupportRounds = 1
 			}
 		}
 
@@ -199,8 +203,8 @@ func (pss *PlayerStatsService) checkForTraded(victimID uint64, deathTick int) {
 	for killed, tick := range pss.statsByPlayer[victimID].KillsList {
 		if deathTick-tick < 4*models.TickRate {
 			pss.statsByPlayer[killed].Traded = 1
-			pss.statsByPlayer[killed].EAC += 1
-			pss.statsByPlayer[killed].KASTRound = 1
+			pss.statsByPlayer[killed].EffectiveAssistsContribution += 1
+			pss.statsByPlayer[killed].KASTRounds = 1
 		}
 	}
 }
@@ -216,9 +220,9 @@ func (pss *PlayerStatsService) checkForTrades(victimID uint64, deathTick int, ki
 
 func (pss *PlayerStatsService) OnAssist(e events.Assist) error {
 	pss.statsByPlayer[e.AssisterID].Assists += 1
-	pss.statsByPlayer[e.AssisterID].EAC += 1
-	pss.statsByPlayer[e.AssisterID].KASTRound = 1
-	pss.statsByPlayer[e.AssisterID].SupportRound = 1
+	pss.statsByPlayer[e.AssisterID].EffectiveAssistsContribution += 1
+	pss.statsByPlayer[e.AssisterID].KASTRounds = 1
+	pss.statsByPlayer[e.AssisterID].SupportRounds = 1
 	pss.statsByPlayer[e.AssisterID].ImpactPoints += 0.15
 	if e.IsAssistedFlash {
 		pss.statsByPlayer[e.AssisterID].FlashAssists += 1
@@ -231,8 +235,8 @@ func (pss *PlayerStatsService) OnAssist(e events.Assist) error {
 func (pss *PlayerStatsService) flashAssist(victimID uint64) {
 	flasherID := pss.statsByPlayer[victimID].MostRecentFlasherID
 	pss.statsByPlayer[flasherID].FlashAssists += 1
-	pss.statsByPlayer[flasherID].EAC += 1
-	pss.statsByPlayer[flasherID].SupportRound = 1
+	pss.statsByPlayer[flasherID].EffectiveAssistsContribution += 1
+	pss.statsByPlayer[flasherID].SupportRounds = 1
 }
 
 func (pss *PlayerStatsService) calculateKillValue(killerTeam string, isAssisted bool, killerID uint64,
@@ -337,6 +341,13 @@ func (pss *PlayerStatsService) OnUpdateRoundContext(e events.UpdateRoundContext)
 
 func (pss *PlayerStatsService) OnGameHalfEnded() error {
 	pss.cTSide, pss.tSide = pss.tSide, pss.cTSide
+	for steamID, side := range pss.sideByPlayer {
+		if side == stats.CounterTerrorists {
+			pss.sideByPlayer[steamID] = stats.Terrorists
+		} else {
+			pss.sideByPlayer[steamID] = stats.CounterTerrorists
+		}
+	}
 	return nil
 }
 
