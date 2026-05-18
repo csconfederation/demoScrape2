@@ -60,6 +60,8 @@ func (rs *RoundService) OnBombPlant() error {
 }
 
 func (rs *RoundService) OnRoundEnd() error {
+	rs.currentRound.IsPrePlant = false
+	rs.currentRound.IsPostPlant = false
 	rs.currentRound.IsPostRoundEnd = true
 	err := rs.bus.Publish(events.UpdateRoundContext{
 		RoundContext: rs.currentRound.Context(),

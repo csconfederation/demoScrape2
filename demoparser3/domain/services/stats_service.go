@@ -7,8 +7,8 @@ import (
 
 type StatsService struct {
 	StatsByPlayer       map[uint64]*stats.PlayerStats
-	CTSideStatsByPlayer map[uint64]*stats.PlayerStats
-	TSideStatsByPlayer  map[uint64]*stats.PlayerStats
+	CTSideStatsByPlayer map[uint64]*stats.CTSidePlayerStats
+	TSideStatsByPlayer  map[uint64]*stats.TSidePlayerStats
 	StatsByTeam         map[string]*stats.TeamStats
 }
 
@@ -26,19 +26,27 @@ func (ss *StatsService) Handle(event events.Event) error {
 
 func (ss *StatsService) OnGameStart() error {
 	ss.StatsByPlayer = make(map[uint64]*stats.PlayerStats)
-	ss.CTSideStatsByPlayer = make(map[uint64]*stats.PlayerStats)
-	ss.TSideStatsByPlayer = make(map[uint64]*stats.PlayerStats)
+	ss.CTSideStatsByPlayer = make(map[uint64]*stats.CTSidePlayerStats)
+	ss.TSideStatsByPlayer = make(map[uint64]*stats.TSidePlayerStats)
 	ss.StatsByTeam = make(map[string]*stats.TeamStats)
 	return nil
 }
 
 func (ss *StatsService) OnRoundEndTeamStats(e events.RoundEndTeamStats) error {
-	for teamName, _ := range e.StatsByTeam {
-		ss.StatsByTeam[teamName].Aggregate(e.StatsByTeam[teamName])
+	for teamName, teamStats := range e.StatsByTeam {
+		ss.StatsByTeam[teamName].Aggregate(teamStats)
 	}
 	return nil
 }
 
 func (ss *StatsService) OnRoundEndPlayerStats(e events.RoundEndPlayerStats) error {
-
+	for steamID, playerStats := range e.StatsByPlayer {
+		ss.StatsByPlayer[steamID].Aggregate(playerStats)
+		if playerStats.PlayerSide == stats.CounterTerrorists {
+			ss.CTSideStatsByPlayer[steamID].Aggregate(playerStats)
+		} else {
+			ss.TSideStatsByPlayer[steamID].Aggregate(playerStats)
+		}
+	}
+	return nil
 }
