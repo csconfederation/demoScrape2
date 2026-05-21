@@ -17,14 +17,12 @@ type PlayerStatsService struct {
 	lastLurkCheckTick    int
 	isOpeningKill        bool
 	bus                  *domain.EventBus
-	sideByPlayer         map[uint64]stats.Side
 }
 
 func NewPlayerStatsService(bus *domain.EventBus) *PlayerStatsService {
 	return &PlayerStatsService{
 		statsByPlayer: make(map[uint64]*stats.PlayerStats),
 		bus:           bus,
-		sideByPlayer:  make(map[uint64]stats.Side),
 	}
 }
 
@@ -54,8 +52,10 @@ func (pss *PlayerStatsService) Handle(event events.Event) error {
 		return pss.OnAssist(e)
 	case events.UpdateRoundContext:
 		return pss.OnUpdateRoundContext(e)
-	case events.GameHalfEnded:
-		return pss.OnGameHalfEnded()
+		//case events.GameHalfEnded:
+		//	return pss.OnGameHalfEnded()
+		//case events.CalculatePlayerRatings:
+		//	return pss.OnCalculatePlayerRatings(e)
 	}
 	return nil
 }
@@ -64,12 +64,10 @@ func (pss *PlayerStatsService) OnMatchStart(e events.MatchStart) error {
 
 	for steamID, name := range e.CTMembers {
 		pss.players[steamID] = name
-		pss.sideByPlayer[steamID] = stats.CounterTerrorists
 	}
 
 	for steamID, name := range e.TMembers {
 		pss.players[steamID] = name
-		pss.sideByPlayer[steamID] = stats.Terrorists
 	}
 
 	pss.cTSide = e.CTSide
@@ -81,7 +79,7 @@ func (pss *PlayerStatsService) OnMatchStart(e events.MatchStart) error {
 func (pss *PlayerStatsService) OnNewRound(e events.NewRound) error {
 	pss.roundCtx = e.RoundContext
 	for steamID, name := range pss.players {
-		pss.statsByPlayer[steamID] = stats.NewPlayerStats(name, pss.sideByPlayer[steamID])
+		pss.statsByPlayer[steamID] = stats.NewPlayerStats(name)
 	}
 	pss.isOpeningKill = true
 	return nil
@@ -339,18 +337,6 @@ func (pss *PlayerStatsService) OnUpdateRoundContext(e events.UpdateRoundContext)
 	return nil
 }
 
-func (pss *PlayerStatsService) OnGameHalfEnded() error {
-	pss.cTSide, pss.tSide = pss.tSide, pss.cTSide
-	for steamID, side := range pss.sideByPlayer {
-		if side == stats.CounterTerrorists {
-			pss.sideByPlayer[steamID] = stats.Terrorists
-		} else {
-			pss.sideByPlayer[steamID] = stats.CounterTerrorists
-		}
-	}
-	return nil
-}
-
 func (pss *PlayerStatsService) CheckLurk(e events.CheckLurk) error {
 	// check every 4 seconds after round start
 	if pss.lastLurkCheckTick+4*models.TickRate < e.Tick {
@@ -384,3 +370,30 @@ func getLurker(distances map[uint64]map[uint64]float64) uint64 {
 
 	return lurkerID
 }
+
+//func (pss *PlayerStatsService) OnCalculatePlayerRatings(e events.CalculatePlayerRatings) error {
+//	for steamID, stats := range pss.statsByPlayer {
+//		//openingFactor := (float64(stats.OpeningKills-stats.OpeningDeaths.Ol) / 13.0) + 1 //move from 13 to (rounds / 5)
+//		//playerIPR := stats.ImpactPoints / float64(stats.Rounds)
+//		//playerWPR := stats.WinPoints / float64(stats.Rounds)
+//
+//		//if stats.TeamsWinPoints != 0 {
+//		//	player.ImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / impactRoundAvg)) + (0.3 * (playerWPR / (player.TeamsWinPoints / float64(player.WinPointsNormalizer))))
+//		//} else {
+//		//	player.ImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / impactRoundAvg))
+//		//}
+//		stats.ImpactRating = 0.0
+//		playerDR := float64(stats.Deaths) / float64(stats.Rounds)
+//		playerRatingDeathComponent := 0.07 * (e.OverallAverages.DeathRoundAverage / playerDR)
+//		if stats.Deaths == 0 || playerRatingDeathComponent > 0.21 {
+//			playerRatingDeathComponent = 0.21
+//		}
+//		// KillRatio is in derived
+//		// KAST in derived
+//		// ADR in derived
+//		stats.Rating = (0.3 * stats.ImpactRating) + (0.35 * (stats.Kills / e.OverallAverages.KillRoundAverage)) +
+//			playerRatingDeathComponent + (0.08 * (stats.KASTRounds / e.OverallAverages.KASTRoundAverage)) +
+//			(0.2 * (stats.ADR / e.OverallAverages.ADRAverage))
+//
+//	}
+//}

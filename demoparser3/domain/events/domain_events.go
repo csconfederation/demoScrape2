@@ -23,6 +23,10 @@ type RoundEndTeamStats struct {
 	StatsByTeam map[string]*stats.TeamStats
 }
 
+type RoundEndSidedPlayerStats struct {
+	SidedStatsByPlayer map[uint64]map[models.Side]*stats.SidedPlayerStats
+}
+
 type CTAWPKill struct {
 	KillerID uint64
 }
@@ -42,4 +46,32 @@ type CheckLurk struct {
 
 type PublishPendingStats struct {
 	PublishPending bool
+}
+
+type CalculateDerivedStats struct {
+	PlayerSteamID uint64
+	PlayerStats   *stats.PlayerStats
+}
+
+type CalculateSidedDerivedStats struct {
+	PlayerSteamID    uint64
+	PlayerSide       models.Side
+	SidedPlayerStats *stats.SidedPlayerStats
+}
+
+type UpdateOverallAverage struct {
+	PlayerStats *stats.PlayerStats
+}
+
+type UpdateSidedAverage struct {
+	PlayerSide       models.Side
+	SidedPlayerStats *stats.SidedPlayerStats
+}
+
+type GameEnd struct{}
+
+type CalculatePlayerRatings struct {
+	OverallAverages *stats.Averages
+	CTSideAverages  *stats.Averages
+	TSideAverages   *stats.Averages
 }

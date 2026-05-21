@@ -156,12 +156,12 @@ func (tss *TeamStatsService) OnDeath(e events.Death) error {
 	if e.VictimTeamName == tss.CTSide {
 		tss.handleCTSideDeath(e.VictimID, isOpeningKill)
 		if len(tss.CTStats.MembersAlive) == 1 && !tss.roundCtx.IsPostRoundEnd {
-			tss.CTStats.ClutchAttempt = *stats.NewClutchAttempt(tss.CTStats.MembersAlive[0], len(tss.TStats.MembersAlive))
+			tss.CTStats.ClutchAttempt = stats.NewClutchAttempt(tss.CTStats.MembersAlive[0], len(tss.TStats.MembersAlive))
 		}
 	} else {
 		tss.handleTSideDeath(e.VictimID, isOpeningKill)
 		if len(tss.TStats.MembersAlive) == 1 && !tss.roundCtx.IsPostRoundEnd {
-			tss.TStats.ClutchAttempt = *stats.NewClutchAttempt(tss.TStats.MembersAlive[0], len(tss.CTStats.MembersAlive))
+			tss.TStats.ClutchAttempt = stats.NewClutchAttempt(tss.TStats.MembersAlive[0], len(tss.CTStats.MembersAlive))
 		}
 	}
 

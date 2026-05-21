@@ -1,12 +1,12 @@
 package stats
 
-import "golang.org/x/exp/constraints"
+import (
+	"golang.org/x/exp/constraints"
+)
 
 type PlayerStats struct {
-	Name                         string
-	ImpactPoints                 float64 `json:"impactPoints" end_of_match_sum:"true"`
+	BasePlayerStats
 	KillPoints                   float64 `json:"killPoints" end_of_match_sum:"true"`
-	DamageDone                   int     `json:"damageDone" end_of_match_sum:"true"`
 	DamageTaken                  int     `json:"damageTaken" end_of_match_sum:"true"`
 	UtilityDamage                int     `json:"utilityDamage" end_of_match_sum:"true"`
 	HEDamage                     int     `json:"heDamage" end_of_match_sum:"true"`
@@ -16,15 +16,10 @@ type PlayerStats struct {
 	MostRecentFlasherID          uint64  `json:"mostRecentFlasher"`
 	MostRecentFlashTickValue     float64
 	UtilityThrown                map[string]int `json:"utilityThrown" end_of_match_sum:"true"`
-	Kills                        int            `json:"kills" end_of_match_sum:"true"`
-	Deaths                       int            `json:"deaths" end_of_match_sum:"true"`
-	DeathPlacement               int            `json:"deathOrder" end_of_match_sum:"true"` // Order in which a player died. Ex.: Entry fraggers will have the lowest order (possibly 0)
 	Assists                      int            `json:"assists" end_of_match_sum:"true"`
-	KASTRounds                   int            `json:"kastRounds" end_of_match_sum:"true"`
 	RoundsFor                    int
 	RoundsAgainst                int
 	RoundsWithKills              int
-	AWPKills                     int
 	Headshots                    int
 	EffectiveAssistsContribution int            `json:"eac" end_of_match_sum:"true"`
 	FlashAssists                 int            `json:"flashAssists" end_of_match_sum:"true"`
@@ -37,35 +32,26 @@ type PlayerStats struct {
 	Trades                       int
 	LurkerBlips                  int `json:"lurkerBlips" end_of_match_sum:"true"`
 	Entries                      int
-	OpeningKills                 int
-	OpeningDeaths                int
 	MostImpactfulPlayer          float64
-	Rounds                       int
 	Clutches                     map[int]int
 	Multikills                   map[int]int
 	Saves                        int
-	WinPoints                    float64
-	PlayerSide                   Side
+	ImpactRating                 float64
+	Rating                       float64
 }
 
-func NewPlayerStats(name string, side Side) *PlayerStats {
+func NewPlayerStats(name string) *PlayerStats {
 	return &PlayerStats{
-		Name:       name,
-		PlayerSide: side,
+		BasePlayerStats: *NewBasePlayerStats(name),
 	}
 }
 
 func (ps *PlayerStats) Aggregate(newStats *PlayerStats) {
-	ps.Rounds += 1
-	ps.Kills += newStats.Kills
-	ps.Deaths += newStats.Deaths
+	ps.AggregateBasePlayerStats(&newStats.BasePlayerStats)
 	ps.Assists += newStats.Assists
-	ps.DamageDone += newStats.DamageDone
 	ps.TicksAlive += newStats.TicksAlive
-	ps.DeathPlacement += ps.DeathPlacement
 	ps.Trades += newStats.Trades
 	ps.Traded += newStats.Traded
-	ps.OpeningKills += newStats.OpeningKills
 	ps.KillPoints += newStats.KillPoints
 	addMap(ps.Clutches, newStats.Clutches)
 	addMap(ps.Multikills, newStats.Multikills)
@@ -76,12 +62,8 @@ func (ps *PlayerStats) Aggregate(newStats *PlayerStats) {
 	ps.FlashAssists += newStats.FlashAssists
 	ps.EnemyFlashDuration += newStats.EnemyFlashDuration
 	ps.Headshots += newStats.Headshots
-	ps.KASTRounds += newStats.KASTRounds
 	ps.Saves += newStats.Saves
 	ps.Entries += newStats.Entries
-	ps.ImpactPoints += newStats.ImpactPoints
-	ps.WinPoints += newStats.WinPoints
-	ps.AWPKills += newStats.AWPKills
 	ps.RoundsFor += newStats.RoundsFor
 	ps.RoundsAgainst += newStats.RoundsAgainst
 	addMap(ps.UtilityThrown, newStats.UtilityThrown)
@@ -91,7 +73,7 @@ func (ps *PlayerStats) Aggregate(newStats *PlayerStats) {
 	ps.RoundsWithKills += newStats.RoundsWithKills
 	ps.MostImpactfulPlayer += newStats.MostImpactfulPlayer
 	ps.EffectiveAssistsContribution += newStats.EffectiveAssistsContribution
-	ps.PlayerSide = Unknown
+	//ps.PlayerSide = models.Unknown
 
 	// if RoundsFor == 1 add WinTeamDamage for that round. Lives in round me thinks
 	//if newStats.RoundsFor == 1 {
@@ -103,4 +85,13 @@ func addMap[K comparable, V constraints.Integer](dst, src map[K]V) {
 	for k, v := range src {
 		dst[k] += v
 	}
+}
+
+func (ps *PlayerStats) GetTotalUtilityThrown() int {
+	total := 0
+	for _, v := range ps.UtilityThrown {
+		total += v
+	}
+
+	return total
 }

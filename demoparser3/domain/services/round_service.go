@@ -20,7 +20,7 @@ func (rs *RoundService) Handle(event events.Event) error {
 	case events.BombPlanted:
 		return rs.OnBombPlant()
 	case events.RoundEnd:
-		return rs.OnRoundEnd()
+		return rs.OnRoundEnd(e)
 	case events.RoundEndOfficial:
 		return rs.OnRoundEndOfficial()
 	case events.FrameDone:
@@ -59,10 +59,11 @@ func (rs *RoundService) OnBombPlant() error {
 	return nil
 }
 
-func (rs *RoundService) OnRoundEnd() error {
+func (rs *RoundService) OnRoundEnd(e events.RoundEnd) error {
 	rs.currentRound.IsPrePlant = false
 	rs.currentRound.IsPostPlant = false
 	rs.currentRound.IsPostRoundEnd = true
+	rs.currentRound.Winner = e.WinningTeamName
 	err := rs.bus.Publish(events.UpdateRoundContext{
 		RoundContext: rs.currentRound.Context(),
 	})

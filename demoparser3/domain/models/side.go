@@ -1,5 +1,4 @@
-// Package stats - avoid circular imports
-package stats
+package models
 
 type Side int
 
