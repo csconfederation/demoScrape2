@@ -1,6 +1,7 @@
 package demoscrape2
 
 import (
+	"errors"
 	"io"
 	"math"
 	"strconv"
@@ -1101,7 +1102,13 @@ func ProcessDemo(demo io.ReadCloser) (*Game, error) {
 	// Parse to end
 	err := p.ParseToEnd()
 
-	endOfMatchProcessing(game)
+	//join rather than pick: ParseToEnd's error explains why the stream stopped,
+	//ErrNoValidRounds says the result is unimportable. Callers classify on both
+	//(errors.Is matches either), and an unimportable demo stays unimportable
+	//whatever ParseToEnd made of it.
+	if procErr := endOfMatchProcessing(game); procErr != nil {
+		return game, errors.Join(err, procErr)
+	}
 
 	return game, err
 

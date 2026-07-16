@@ -7,8 +7,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func removeInvalidRounds(game *Game) {
+func removeInvalidRounds(game *Game) error {
 	//we want to remove bad rounds (knife/veto rounds, incomplete rounds, redo rounds)
+	if len(game.Rounds) == 0 {
+		return ErrNoValidRounds
+	}
 	validRoundsMap := make(map[int8]bool)
 	validRounds := make([]*round, 0)
 	lastProcessedRoundNum := game.Rounds[len(game.Rounds)-1].RoundNum + 1
@@ -29,10 +32,19 @@ func removeInvalidRounds(game *Game) {
 		validRounds[i], validRounds[j] = validRounds[j], validRounds[i]
 	}
 	game.Rounds = validRounds
+	if len(validRounds) == 0 {
+		return ErrNoValidRounds
+	}
+	return nil
 }
 
-func endOfMatchProcessing(game *Game) {
-	removeInvalidRounds(game)
+func endOfMatchProcessing(game *Game) error {
+	if err := removeInvalidRounds(game); err != nil {
+		//every loop below tolerates an empty Rounds slice, so continuing here
+		//would return a well-formed but totally empty Game and silently import a
+		//0-round match. Fail loudly instead.
+		return err
+	}
 
 	game.TotalPlayerStats = make(map[uint64]*playerStats)
 	game.TotalTeamStats = make(map[string]*teamStats)
@@ -203,7 +215,7 @@ func endOfMatchProcessing(game *Game) {
 	}
 
 	calculateDerivedFields(game)
-	return
+	return nil
 }
 
 func calculateDerivedFields(game *Game) {
