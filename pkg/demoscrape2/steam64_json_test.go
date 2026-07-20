@@ -35,6 +35,9 @@ func TestSteam64FieldsMarshalAsExactDecimalStrings(t *testing.T) {
 	if err := json.Unmarshal(payload, &decoded); err != nil {
 		t.Fatalf("json.Unmarshal(payload) error = %v", err)
 	}
+	if _, ok := decoded["PlayerOrder"]; ok {
+		t.Fatal("payload contains unexpected PlayerOrder key")
+	}
 
 	assertString := func(path string, value any) {
 		t.Helper()
@@ -54,6 +57,20 @@ func TestSteam64FieldsMarshalAsExactDecimalStrings(t *testing.T) {
 	assertString("player.steamID", player["steamID"])
 	assertString("player.mostRecentFlasher", player["mostRecentFlasher"])
 	assertString("playerOrder[0]", decoded["playerOrder"].([]any)[0])
+}
+
+func TestNilPlayerOrderMarshalsAsNull(t *testing.T) {
+	payload, err := json.Marshal(Game{})
+	if err != nil {
+		t.Fatalf("json.Marshal(Game{}) error = %v", err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(payload, &decoded); err != nil {
+		t.Fatalf("json.Unmarshal(payload) error = %v", err)
+	}
+	if decoded["playerOrder"] != nil {
+		t.Fatalf("nil playerOrder = %#v, want null", decoded["playerOrder"])
+	}
 }
 
 func TestSteam64ZeroSentinelsMarshalAsStrings(t *testing.T) {

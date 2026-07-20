@@ -35,9 +35,12 @@ type Game struct {
 // those Steam64s as strings at the external JSON boundary.
 func (game Game) MarshalJSON() ([]byte, error) {
 	type gameJSON Game
-	playerOrder := make([]string, len(game.PlayerOrder))
-	for i, id := range game.PlayerOrder {
-		playerOrder[i] = strconv.FormatUint(id, 10)
+	var playerOrder []string
+	if game.PlayerOrder != nil {
+		playerOrder = make([]string, len(game.PlayerOrder))
+		for i, id := range game.PlayerOrder {
+			playerOrder[i] = strconv.FormatUint(id, 10)
+		}
 	}
 	return json.Marshal(struct {
 		gameJSON
