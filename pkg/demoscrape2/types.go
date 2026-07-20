@@ -1,5 +1,10 @@
 package demoscrape2
 
+import (
+	"encoding/json"
+	"strconv"
+)
+
 type Game struct {
 	//winnerID         int
 	CoreID                   string                  `json:"coreID"`
@@ -26,6 +31,26 @@ type Game struct {
 	TotalWPAlog              []*wpalog               `json:"totalWPAlog"`
 }
 
+// MarshalJSON preserves Game's public numeric PlayerOrder API while emitting
+// those Steam64s as strings at the external JSON boundary.
+func (game Game) MarshalJSON() ([]byte, error) {
+	type gameJSON Game
+	var playerOrder []string
+	if game.PlayerOrder != nil {
+		playerOrder = make([]string, len(game.PlayerOrder))
+		for i, id := range game.PlayerOrder {
+			playerOrder[i] = strconv.FormatUint(id, 10)
+		}
+	}
+	return json.Marshal(struct {
+		gameJSON
+		PlayerOrder []string `json:"playerOrder"`
+	}{
+		gameJSON:    gameJSON(game),
+		PlayerOrder: playerOrder,
+	})
+}
+
 type flag struct {
 	//all our sentinals and shit
 	HasGameStarted            bool `json:"hasGameStarted"`
@@ -45,8 +70,8 @@ type flag struct {
 	TMoney             bool   `json:"TMoney"`
 	TClutchVal         int    `json:"TClutchVal"`
 	CtClutchVal        int    `json:"ctClutchVal"`
-	TClutchSteam       uint64 `json:"TClutchSteam"`
-	CtClutchSteam      uint64 `json:"ctClutchSteam"`
+	TClutchSteam       uint64 `json:"TClutchSteam,string"`
+	CtClutchSteam      uint64 `json:"ctClutchSteam,string"`
 	OpeningKill        bool   `json:"openingKill"`
 	LastTickProcessed  int    `json:"lastTickProcessed"`
 	TicksProcessed     int    `json:"ticksProcessed"`
@@ -106,8 +131,8 @@ type round struct {
 	//winnerID            int //this is the unique ID which should not change BUT IT DOES
 	WinnerENUM         int     `json:"winnerENUM"` //this effectively represents the side that won: 2 (T) or 3 (CT)
 	IntegrityCheck     bool    `json:"integrityCheck"`
-	Planter            uint64  `json:"planter"`
-	Defuser            uint64  `json:"defuser"`
+	Planter            uint64  `json:"planter,string"`
+	Defuser            uint64  `json:"defuser,string"`
 	EndDueToBombEvent  bool    `json:"endDueToBombEvent"`
 	WinTeamDmg         int     `json:"winTeamDmg"`
 	ServerNormalizer   int     `json:"serverNormalizer"`
@@ -264,7 +289,7 @@ type playerStats struct {
 	//"flags"
 	Health             int            `json:"health"`
 	TradeList          map[uint64]int `json:"tradeList"`
-	MostRecentFlasher  uint64         `json:"mostRecentFlasher"`
+	MostRecentFlasher  uint64         `json:"mostRecentFlasher,string"`
 	MostRecentFlashVal float64        `json:"mostRecentFlashVal"`
 	DamageList         map[uint64]int `json:"damageList"`
 }
